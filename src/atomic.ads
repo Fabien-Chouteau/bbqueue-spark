@@ -1,5 +1,6 @@
 package Atomic
-with Preelaborate
+with Preelaborate,
+     Spark_Mode
 is
 
    type Mem_Order is
@@ -30,29 +31,51 @@ is
 
    type Flag is limited private;
 
-   function Init (Val : Boolean) return Flag;
+   function Init (Val : Boolean) return Flag
+     with Post => Value (Init'Result) = Val;
    --  Can be used to initialize an Atomic_Flag:
    --
    --  A : Atomic.Flag := Atomic.Init (0);
 
    function Set (This  : aliased Flag;
                  Order : Mem_Order := Seq_Cst)
-                 return Boolean;
+                 return Boolean
+     with Post => Set'Result = Value (This);
 
-   function Test_And_Set (This  : aliased in out Flag;
-                          Order : Mem_Order := Seq_Cst)
-                          return Boolean;
+   procedure Test_And_Set (This   : aliased in out Flag;
+                           Result : out Boolean;
+                           Order  : Mem_Order := Seq_Cst)
+     with Post => Result = Value (This)'Old
+     and then Value (This) = True;
 
+   --  function Test_And_Set (This  : aliased in out Flag;
+   --                         Order : Mem_Order := Seq_Cst)
+   --                         return Boolean;
+   --
    procedure Clear (This : aliased in out Flag;
-                    Order : Mem_Order := Seq_Cst);
+                    Order : Mem_Order := Seq_Cst)
+   with Post => Value (This) = False;
+
+   function Value (This : Flag) return Boolean
+     with Ghost;
+   --  Ghost function to get the value of an Flag without needing it aliased.
+   --  This doesn't use the atomic built-ins.
 
 private
 
    type Flag is mod 2 ** 8
      with Size => 8;
 
+   -----------
+   -- Value --
+   -----------
+
+   function Value (This : Flag) return Boolean
+   is (This /= 0);
+
    pragma Inline (Init);
    pragma Inline (Set);
    pragma Inline (Test_And_Set);
    pragma Inline (Clear);
+   pragma Inline (Value);
 end Atomic;

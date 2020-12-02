@@ -2,52 +2,50 @@ with Ada.Text_IO; use Ada.Text_IO;
 
 with Atomic; use Atomic;
 
-package body BBqueue is
-
-   ---------------------------
-   -- Err_Insufficient_Size --
-   ---------------------------
-
-   function Err_Insufficient_Size return Write_Grant
-   is (Write_Grant'(Result => Insufficient_Size));
-
-   ---------------------------
-   -- Err_Insufficient_Size --
-   ---------------------------
-
-   function Err_Insufficient_Size return Read_Grant
-   is (Read_Grant'(Result => Insufficient_Size));
-
-   ---------------------------
-   -- Err_Grant_In_Progress --
-   ---------------------------
-
-   function Err_Grant_In_Progress return Write_Grant
-   is (Write_Grant'(Result => Grant_In_Progress));
-
-   ---------------------------
-   -- Err_Grant_In_Progress --
-   ---------------------------
-
-   function Err_Grant_In_Progress return Read_Grant
-   is (Read_Grant'(Result => Grant_In_Progress));
+package body BBqueue
+with SPARK_Mode
+is
 
    -----------
    -- Grant --
    -----------
 
-   function Grant
-     (This : aliased in out Buffer;
-      Size : Count)
-      return Write_Grant
+   procedure Grant (This : in out Buffer;
+                    G    : in out Slice;
+                    Size : Count)
    is
       Read, Write, Start : Count;
-      Max : constant Count := This.Buffer'Length;
+      Max : constant Count := This.Buf'Last;
       Already_Inverted : Boolean;
+      In_Progress : Boolean;
+
    begin
 
-      if Test_And_Set (This.Write_In_Progress, Acq_Rel) then
-         return Err_Grant_In_Progress;
+      Test_And_Set (This.Write_In_Progress, In_Progress, Acq_Rel);
+      if In_Progress then
+         G.Result := Grant_In_Progress;
+         G.Size   := 0;
+         G.Index  := 0;
+         return;
+      end if;
+
+      if Size = 0 then
+         Clear (This.Write_In_Progress, Release);
+         G.Result := Empty;
+         G.Size   := 0;
+         G.Index  := 0;
+         This.Granted_Write_Size := 0;
+         return;
+      end if;
+
+      if Size > This.Size then
+         Clear (This.Write_In_Progress, Release);
+         G.Result := Insufficient_Size;
+         G.Size   := 0;
+         G.Index  := 0;
+         This.Granted_Write_Size := 0;
+
+         return;
       end if;
 
       --  Writer component. Must never write to `read`,
@@ -57,16 +55,25 @@ package body BBqueue is
       Already_Inverted := Write < Read;
 
       if Already_Inverted then
+
          if (Write + Size) < Read then
             --  Inverted, room is still available
             Start := Write;
          else
             --  Inverted, no room is available
             Clear (This.Write_In_Progress, Release);
-            return Err_Insufficient_Size;
+            G.Result := Insufficient_Size;
+            G.Size   := 0;
+            G.Index  := 0;
+            This.Granted_Write_Size := 0;
+
+            return;
          end if;
+
       else
+
          if (Write + Size) <= Max then
+
             --  Non inverted condition
             Start := Write;
          else
@@ -80,30 +87,42 @@ package body BBqueue is
             else
                --  Inverted, no room is available
                Clear (This.Write_In_Progress, Release);
-               return Err_Insufficient_Size;
+               G.Result := Insufficient_Size;
+               G.Size   := 0;
+               G.Index  := 0;
+               This.Granted_Write_Size := 0;
+               return;
             end if;
+
          end if;
       end if;
 
+      --  This is what we want to prove: the granted slice is in the writeable
+      --  area.
+      pragma Assert (Size /= 0);
+      pragma Assert (In_Writable_Area (This, Start));
+      pragma Assert (In_Writable_Area (This, Start + Size - 1));
+
       Atomic_Count.Store (This.Reserve, Start + Size, Release);
 
-      return (Result => Success,
-              BBQ    => This'Unchecked_Access,
-              Size   => Size,
-              Index  => This.Buffer'First + Start,
-              Addr   => This.Buffer (This.Buffer'First + Start)'Address);
+      This.Granted_Write_Size := Size;
+
+      G.Result := Success;
+      G.Size   := Size;
+      G.Index  := This.Buf'First + Start;
+      --  G.Addr   := This.Buf (This.Buf'First + Start)'Address;
    end Grant;
 
    ------------
    -- Commit --
    ------------
 
-   procedure Commit (G    : in out Write_Grant;
-                     Size :        Count := Count'Last)
+   procedure Commit (This   : in out Buffer;
+                     Size   :        Count := Count'Last)
    is
-      This : Buffer renames G.BBQ.all;
-      Used, Write, Last, New_Write, Len : Count;
-      Max : constant Count := This.Buffer'Length;
+      Used, Write, Last, New_Write : Count;
+      Max : constant Count := This.Buf'Length;
+      Len : constant Count := This.Granted_Write_Size;
    begin
       --  If there is no grant in progress, return early. This
       --  generally means we are dropping the grant within a
@@ -116,22 +135,21 @@ package body BBqueue is
       --  be careful writing to LAST
 
       --  Saturate the grant commit
-      Len :=  G.Size;
       Used := Count'Min (Len, Size);
       Write := Atomic_Count.Load (This.Write, Acquire);
 
-      --  TODO ATOMIC
-      --  atomic::fetch_sub(&inner.reserve, len - used, AcqRel);
       Atomic_Count.Sub (This.Reserve, Len - Used, Acq_Rel);
 
       Last := Atomic_Count.Load (This.Last, Acquire);
       New_Write := Atomic_Count.Load (This.Reserve, Acquire);
 
       if (New_Write < Write) and then (Write /= Max) then
+
          --  We have already wrapped, but we are skipping some bytes at the end
          --  of the ring. Mark `last` where the write pointer used to be to hold
          --  the line here
          Atomic_Count.Store (This.Last, Write, Release);
+
       elsif New_Write > Last then
          --  We're about to pass the last pointer, which was previously the
          --  artificial end of the ring. Now that we've passed it, we can
@@ -153,25 +171,31 @@ package body BBqueue is
       --  time to invert early!
       Atomic_Count.Store (This.Write, New_Write, Release);
 
-      G := (Result => Empty);
+      --  Nothing granted anymore
+      This.Granted_Write_Size := 0;
 
       --  Allow subsequent grants
       Clear (This.Write_In_Progress, Release);
+
    end Commit;
 
    ----------
    -- Read --
    ----------
 
-   function Read
-     (This : aliased in out Buffer)
-      return Read_Grant
+   procedure Read (This : in out Buffer;
+                   G    : in out Slice)
    is
       Read, Write, Last, Size : Count;
+      In_Progress : Boolean;
    begin
 
-      if Test_And_Set (This.Read_In_Progress, Acq_Rel) then
-         return Err_Grant_In_Progress;
+      Test_And_Set (This.Read_In_Progress, In_Progress, Acq_Rel);
+      if In_Progress then
+         G.Result := Grant_In_Progress;
+         G.Size   := 0;
+         G.Index  := 0;
+         return;
       end if;
 
       Write := Atomic_Count.Load (This.Write, Acquire);
@@ -193,32 +217,41 @@ package body BBqueue is
          Atomic_Count.Store (This.Read, 0, Release);
       end if;
 
-      Size := (if Write < Read then Last else Write) - Read;
+      Size := (if Write < Read then Last - Read else Write - Read);
 
       if Size = 0 then
          Clear (This.Read_In_Progress);
-         return Err_Insufficient_Size;
+         G.Result := Insufficient_Size;
+         G.Size   := 0;
+         G.Index  := 0;
+         return;
       end if;
 
-      return (Result => Success,
-              BBQ    => This'Unchecked_Access,
-              Size   => Size,
-              Index  => This.Buffer'First + Read,
-              Addr   => This.Buffer (This.Buffer'First + Read)'Address);
+      --  This is what we want to prove: the granted slice is in the readable
+      --  area.
+      pragma Assert (Size /= 0);
+      pragma Assert (In_Readable_Area (This, Read));
+      pragma Assert (In_Readable_Area (This, Read + Size - 1));
+
+      This.Granted_Read_Size := Size;
+
+      G.Result := Success;
+      G.Size   := Size;
+      G.Index  := This.Buf'First + Read;
+      --  G.Addr   := This.Buf (This.Buf'First + Read)'Address;
    end Read;
 
    -------------
    -- Release --
    -------------
 
-   procedure Release (G    : in out Read_Grant;
+   procedure Release (This : in out Buffer;
                       Size :        Count := Count'Last)
    is
-      This : Buffer renames G.BBQ.all;
       Used : Count;
    begin
       --  Saturate the grant commit
-      Used := Count'Min (G.Size, Size);
+      Used := Count'Min (This.Granted_Read_Size, Size);
 
       --  If there is no grant in progress, return early. This
       --  generally means we are dropping the grant within a
@@ -233,8 +266,10 @@ package body BBqueue is
       --  This should be fine, purely incrementing
       Atomic_Count.Add (This.Read, Used, Release);
 
-      G := (Result => Empty);
+      --  Nothing granted anymore
+      This.Granted_Read_Size := 0;
 
+      --  Allow subsequent read
       Clear (This.Read_In_Progress, Release);
    end Release;
 
@@ -243,11 +278,29 @@ package body BBqueue is
    -----------
 
    procedure Print (This : Buffer) is
+      procedure Print (Pos : Count; C : Character);
+      procedure Print (Pos : Count; C : Character) is
+      begin
+         for Index in Count range This.Buf'First .. This.Buf'Last + 1 loop
+            if Pos = Index then
+               Put (C);
+            else
+               Put (' ');
+            end if;
+         end loop;
+         New_Line;
+      end Print;
+      use type Interfaces.Unsigned_8;
    begin
-      for Elt of This.Buffer loop
-         Put (Elt'Img);
+      for Index in This.Buf'Range loop
+         Put (Character'Val (Character'Pos ('0') + (This.Buf (Index) mod 10)));
       end loop;
       New_Line;
+
+      Print (Atomic_Count.Load (This.Write, Seq_Cst) + 1, 'W');
+      Print (Atomic_Count.Load (This.Read, Seq_Cst) + 1, 'R');
+      Print (Atomic_Count.Load (This.Reserve, Seq_Cst) + 1, 'G');
+      Print (Atomic_Count.Load (This.Last, Seq_Cst) + 1, 'L');
    end Print;
 
 end BBqueue;

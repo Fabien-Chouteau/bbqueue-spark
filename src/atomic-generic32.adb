@@ -46,7 +46,7 @@ package body Atomic.Generic32 is
    --------------
 
    function Exchange
-     (This  : aliased Instance;
+     (This  : aliased in out Instance;
       Val   : T;
       Order : Mem_Order := Seq_Cst)
       return T
@@ -65,7 +65,7 @@ package body Atomic.Generic32 is
    ----------------------
 
    function Compare_Exchange
-     (This          : aliased Instance;
+     (This          : aliased in out Instance;
       Expected      : T;
       Desired       : T;
       Weak          : Boolean;
@@ -95,7 +95,7 @@ package body Atomic.Generic32 is
    -- Add --
    ---------
 
-   procedure Add (This  : aliased Instance;
+   procedure Add (This  : aliased in out Instance;
                   Val   : T;
                   Order : Mem_Order := Seq_Cst)
    is
@@ -108,7 +108,7 @@ package body Atomic.Generic32 is
    -- Sub --
    ---------
 
-   procedure Sub (This  : aliased Instance;
+   procedure Sub (This  : aliased in out Instance;
                   Val   : T;
                   Order : Mem_Order := Seq_Cst)
    is
@@ -121,7 +121,7 @@ package body Atomic.Generic32 is
    -- Op_And --
    ------------
 
-   procedure Op_And (This  : aliased Instance;
+   procedure Op_And (This  : aliased in out Instance;
                      Val   : T;
                      Order : Mem_Order := Seq_Cst)
    is
@@ -134,7 +134,7 @@ package body Atomic.Generic32 is
    -- Op_XOR --
    ------------
 
-   procedure Op_XOR (This  : aliased Instance;
+   procedure Op_XOR (This  : aliased in out Instance;
                      Val   : T;
                      Order : Mem_Order := Seq_Cst)
    is
@@ -147,7 +147,7 @@ package body Atomic.Generic32 is
    -- Op_OR --
    -----------
 
-   procedure Op_OR (This  : aliased Instance;
+   procedure Op_OR (This  : aliased in out Instance;
                     Val   : T;
                     Order : Mem_Order := Seq_Cst)
    is
@@ -160,7 +160,7 @@ package body Atomic.Generic32 is
    -- NAND --
    ----------
 
-   procedure NAND (This  : aliased Instance;
+   procedure NAND (This  : aliased in out Instance;
                    Val   : T;
                    Order : Mem_Order := Seq_Cst)
    is
@@ -174,7 +174,7 @@ package body Atomic.Generic32 is
    ---------------
 
    function Add_Fetch
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -191,7 +191,7 @@ package body Atomic.Generic32 is
    ---------------
 
    function Sub_Fetch
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -208,7 +208,7 @@ package body Atomic.Generic32 is
    ---------------
 
    function And_Fetch
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -225,7 +225,7 @@ package body Atomic.Generic32 is
    ---------------
 
    function XOR_Fetch
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -242,7 +242,7 @@ package body Atomic.Generic32 is
    --------------
 
    function OR_Fetch
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -259,7 +259,7 @@ package body Atomic.Generic32 is
    ----------------
 
    function NAND_Fetch
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -277,7 +277,7 @@ package body Atomic.Generic32 is
    ---------------
 
    function Fetch_Add
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -294,7 +294,7 @@ package body Atomic.Generic32 is
    ---------------
 
    function Fetch_Sub
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -311,7 +311,7 @@ package body Atomic.Generic32 is
    ---------------
 
    function Fetch_And
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -328,7 +328,7 @@ package body Atomic.Generic32 is
    ---------------
 
    function Fetch_XOR
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -345,7 +345,7 @@ package body Atomic.Generic32 is
    --------------
 
    function Fetch_OR
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -362,7 +362,7 @@ package body Atomic.Generic32 is
    ----------------
 
    function Fetch_NAND
-     (This : aliased Instance; Val : T; Order : Mem_Order := Seq_Cst)
+     (This : aliased in out Instance; Val : T; Order : Mem_Order := Seq_Cst)
       return T
    is
       function Intrinsic
@@ -373,6 +373,272 @@ package body Atomic.Generic32 is
                      "__atomic_fetch_nand_" & Size_Suffix);
    begin
       return Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Fetch_NAND;
+
+   -- SPARK compatible --
+
+   --------------
+   -- Exchange --
+   --------------
+
+   procedure Exchange (This  : aliased in out Instance;
+                       Val   : T;
+                       Old   : out T;
+                       Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_exchange_" & Size_Suffix);
+   begin
+      Old := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Exchange;
+
+   ----------------------
+   -- Compare_Exchange --
+   ----------------------
+
+   procedure Compare_Exchange (This          : aliased in out Instance;
+                               Expected      : T;
+                               Desired       : T;
+                               Weak          : Boolean;
+                               Success       : out Boolean;
+                               Success_Order : Mem_Order := Seq_Cst;
+                               Failure_Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr      : System.Address;
+         Expected : System.Address;
+         Desired  : T;
+         Weak     : Boolean;
+         Success_Order, Failure_Order : Integer) return Boolean;
+      pragma Import (Intrinsic, Intrinsic,
+                     "__atomic_compare_exchange_" & Size_Suffix);
+
+      Exp : T := Expected;
+   begin
+      Success := Intrinsic (This'Address, Exp'Address,
+                            Desired,
+                            Weak,
+                            Success_Order'Enum_Rep,
+                            Failure_Order'Enum_Rep);
+   end Compare_Exchange;
+
+   ---------------
+   -- Add_Fetch --
+   ---------------
+
+   procedure Add_Fetch (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_add_fetch_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Add_Fetch;
+
+   ---------------
+   -- Sub_Fetch --
+   ---------------
+
+   procedure Sub_Fetch (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_sub_fetch_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Sub_Fetch;
+
+   ---------------
+   -- And_Fetch --
+   ---------------
+
+   procedure And_Fetch (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_and_fetch_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end And_Fetch;
+
+   ---------------
+   -- XOR_Fetch --
+   ---------------
+
+   procedure XOR_Fetch (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_xor_fetch_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end XOR_Fetch;
+
+   --------------
+   -- OR_Fetch --
+   --------------
+
+   procedure OR_Fetch (This  : aliased in out Instance;
+                      Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_or_fetch_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end OR_Fetch;
+
+   ----------------
+   -- NAND_Fetch --
+   ----------------
+
+   procedure NAND_Fetch (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_and_fetch_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end NAND_Fetch;
+
+   ---------------
+   -- Fetch_Add --
+   ---------------
+
+   procedure Fetch_Add (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_fetch_add_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Fetch_Add;
+
+   ---------------
+   -- Fetch_Sub --
+   ---------------
+
+   procedure Fetch_Sub (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_fetch_sub_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Fetch_Sub;
+
+   ---------------
+   -- Fetch_And --
+   ---------------
+
+   procedure Fetch_And (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_fetch_and_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Fetch_And;
+
+   ---------------
+   -- Fetch_XOR --
+   ---------------
+
+   procedure Fetch_XOR (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_fetch_xor_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Fetch_XOR;
+
+   --------------
+   -- Fetch_OR --
+   --------------
+
+   procedure Fetch_OR (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_fetch_or_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Fetch_OR;
+
+   ----------------
+   -- Fetch_NAND --
+   ----------------
+
+   procedure Fetch_NAND (This  : aliased in out Instance;
+                         Val   : T;
+                         Result : out T;
+                         Order : Mem_Order := Seq_Cst)
+   is
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_fetch_nand_" & Size_Suffix);
+   begin
+      Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
    end Fetch_NAND;
 
 end Atomic.Generic32;

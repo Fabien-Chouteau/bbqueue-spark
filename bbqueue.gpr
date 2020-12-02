@@ -46,7 +46,7 @@ project BBqueue is
          Style_Checks_Switches :=
            ("-gnatyg",   -- GNAT Style checks
             "-gnaty-d",  -- Disable no DOS line terminators
-            "-gnatyM80", -- Maximum line length
+            "-gnatyM200", -- Maximum line length
             "-gnatyO");  -- Overriding subprograms explicitly marked as such
       when others => null;
    end case;
@@ -76,7 +76,8 @@ project BBqueue is
         Runtime_Checks_Switches &
         Style_Checks_Switches &
         Contracts_Switches &
-        ("-gnatQ");  -- Don't quit. Generate ALI and tree files even if illegalities
+      ("-gnatwC", -- Suppress warnings on conditionals (lower bound test optimized away)
+       "-gnatQ");  -- Don't quit. Generate ALI and tree files even if illegalities
    end Compiler;
 
    package Binder is
