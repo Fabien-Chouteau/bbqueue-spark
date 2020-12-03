@@ -1,7 +1,8 @@
+
 generic
-   type T is (<>);
+   type T is mod <>;
 package Atomic.Generic64
-with Preelaborate
+with Preelaborate, Spark_Mode => Off
 is
    --  Based on GCC atomic built-ins. See:
    --  https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
@@ -13,97 +14,255 @@ is
    --  This type is limited and private, it can only be manipulated using the
    --  primitives below.
 
-   function Init (Val : T) return Instance;
+   function Init (Val : T) return Instance
+     with Post => Value (Init'Result) = Val;
    --  Can be used to initialize an atomic instance:
    --
    --  A : Atomic.Unsigned_8.Instance := Atomic.Unsigned_8.Init (0);
 
+   function Value (This : Instance) return T
+     with Ghost;
+   --  Ghost function to get the value of an instance without needing it
+   --  aliased. This function can be used in contracts an
+   --  This doesn't use the atomic built-ins.
+
    function Load (This  : aliased Instance;
                   Order : Mem_Order := Seq_Cst)
-                  return T;
+                  return T
+     with Pre  => Order in Relaxed | Consume | Acquire | Seq_Cst,
+          Post => Load'Result = Value (This);
 
    procedure Store (This  : aliased in out Instance;
                     Val   : T;
-                    Order : Mem_Order := Seq_Cst);
+                    Order : Mem_Order := Seq_Cst)
+     with Pre  => Order in Relaxed | Release | Seq_Cst,
+          Post => Value (This) = Val;
 
-   function Exchange (This  : aliased Instance;
+   -- SPARK compatible --
+
+   procedure Exchange (This  : aliased in out Instance;
+                       Val   : T;
+                       Old   : out T;
+                       Order : Mem_Order := Seq_Cst)
+     with Pre  => Order in Relaxed | Acquire | Release | Acq_Rel | Seq_Cst,
+          Post => Old = Value (This)'Old and then Value (This) = Val;
+
+   procedure Compare_Exchange (This          : aliased in out Instance;
+                               Expected      : T;
+                               Desired       : T;
+                               Weak          : Boolean;
+                               Success       : out Boolean;
+                               Success_Order : Mem_Order := Seq_Cst;
+                               Failure_Order : Mem_Order := Seq_Cst)
+     with Pre  => Failure_Order in Relaxed | Consume | Acquire | Seq_Cst
+                  and then
+                  not Stronger (Failure_Order, Success_Order),
+          Post => Success = (Value (This)'Old = Expected)
+                  and then
+                  (if Success then Value (This) = Desired);
+
+   procedure Add (This  : aliased in out Instance;
+                  Val   : T;
+                  Order : Mem_Order := Seq_Cst)
+     with Post => Value (This) = Value (This)'Old + Val;
+
+   procedure Sub (This  : aliased in out Instance;
+                  Val   : T;
+                  Order : Mem_Order := Seq_Cst)
+     with Post => Value (This) = Value (This)'Old - Val;
+
+   procedure Op_And (This  : aliased in out Instance;
+                     Val   : T;
+                     Order : Mem_Order := Seq_Cst)
+     with Post => Value (This) = (Value (This)'Old and Val);
+
+   procedure Op_XOR (This  : aliased in out Instance;
+                     Val   : T;
+                     Order : Mem_Order := Seq_Cst)
+     with Post => Value (This) = (Value (This)'Old xor Val);
+
+   procedure Op_OR (This  : aliased in out Instance;
+                    Val   : T;
+                    Order : Mem_Order := Seq_Cst)
+     with Post => Value (This) = (Value (This)'Old or Val);
+
+   procedure NAND (This  : aliased in out Instance;
+                   Val   : T;
+                   Order : Mem_Order := Seq_Cst)
+     with Post => Value (This) = not (Value (This)'Old and Val);
+
+   procedure Add_Fetch (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = (Value (This)'Old + Val)
+     and then Value (This) = Result;
+
+   procedure Sub_Fetch (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = (Value (This)'Old - Val)
+     and then Value (This) = Result;
+
+   procedure And_Fetch (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = (Value (This)'Old and Val)
+     and then Value (This) = Result;
+
+   procedure XOR_Fetch (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = (Value (This)'Old xor Val)
+     and then Value (This) = Result;
+
+   procedure OR_Fetch (This  : aliased in out Instance;
+                      Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = (Value (This)'Old or Val)
+     and then Value (This) = Result;
+
+   procedure NAND_Fetch (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = not (Value (This)'Old and Val)
+     and then Value (This) = Result;
+
+   procedure Fetch_Add (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = Value (This)'Old
+     and Value (This) = (Value (This)'Old + Val);
+
+   procedure Fetch_Sub (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = Value (This)'Old
+     and Value (This) = (Value (This)'Old - Val);
+
+   procedure Fetch_And (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = Value (This)'Old
+     and Value (This) = (Value (This)'Old and Val);
+
+   procedure Fetch_XOR (This  : aliased in out Instance;
+                       Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = Value (This)'Old
+     and Value (This) = (Value (This)'Old xor Val);
+
+   procedure Fetch_OR (This  : aliased in out Instance;
+                      Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = Value (This)'Old
+     and Value (This) = (Value (This)'Old or Val);
+
+   procedure Fetch_NAND (This  : aliased in out Instance;
+                        Val   : T;
+                        Result : out T;
+                        Order : Mem_Order := Seq_Cst)
+     with Post => Result = Value (This)'Old
+     and Value (This) = not (Value (This)'Old and Val);
+   -- NOT SPARK compatible --
+
+   function Exchange (This  : aliased in out Instance;
                       Val   : T;
                       Order : Mem_Order := Seq_Cst)
-                      return T;
+                      return T
+     with Post => Exchange'Result = Value (This)'Old
+     and then Value (This) = Val;
 
-   function Compare_Exchange (This          : aliased Instance;
+   function Compare_Exchange (This          : aliased in out Instance;
                               Expected      : T;
                               Desired       : T;
                               Weak          : Boolean;
                               Success_Order : Mem_Order := Seq_Cst;
                               Failure_Order : Mem_Order := Seq_Cst)
-                              return Boolean;
+                              return Boolean
+     with Post =>
+       Compare_Exchange'Result = (Value (This)'Old = Expected)
+     and then
+       (if Compare_Exchange'Result then Value (This) = Desired);
 
-   procedure Add (This  : aliased Instance;
-                  Val   : T;
-                  Order : Mem_Order := Seq_Cst);
-   procedure Sub (This  : aliased Instance;
-                  Val   : T;
-                  Order : Mem_Order := Seq_Cst);
-   procedure Op_And (This  : aliased Instance;
-                     Val   : T;
-                     Order : Mem_Order := Seq_Cst);
-   procedure Op_XOR (This  : aliased Instance;
-                     Val   : T;
-                     Order : Mem_Order := Seq_Cst);
-   procedure Op_OR (This  : aliased Instance;
-                    Val   : T;
-                    Order : Mem_Order := Seq_Cst);
-   procedure NAND (This  : aliased Instance;
-                   Val   : T;
-                   Order : Mem_Order := Seq_Cst);
+   function Add_Fetch (This  : aliased in out Instance;
+                       Val   : T;
+                       Order : Mem_Order := Seq_Cst)
+                       return T
+     with Post => Add_Fetch'Result = (Value (This)'Old + Val)
+     and then Value (This) = Add_Fetch'Result;
 
-   function Add_Fetch (This  : aliased Instance;
+   function Sub_Fetch (This  : aliased in out Instance;
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
-                       return T;
-   function Sub_Fetch (This  : aliased Instance;
+                       return T
+     with Post => Sub_Fetch'Result = (Value (This)'Old - Val)
+     and then Value (This) = Sub_Fetch'Result;
+
+   function And_Fetch (This  : aliased in out Instance;
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
-                       return T;
-   function And_Fetch (This  : aliased Instance;
+                       return T
+     with Post => And_Fetch'Result = (Value (This)'Old and Val)
+     and then Value (This) = And_Fetch'Result;
+
+   function XOR_Fetch (This  : aliased in out Instance;
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
-                       return T;
-   function XOR_Fetch (This  : aliased Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T;
-   function OR_Fetch (This  : aliased Instance;
+                       return T
+     with Post => XOR_Fetch'Result = (Value (This)'Old xor Val)
+     and then Value (This) = XOR_Fetch'Result;
+
+   function OR_Fetch (This  : aliased in out Instance;
                       Val   : T;
                       Order : Mem_Order := Seq_Cst)
-                      return T;
-   function NAND_Fetch (This  : aliased Instance;
+                      return T
+     with Post => OR_Fetch'Result = (Value (This)'Old or Val)
+     and then Value (This) = OR_Fetch'Result;
+
+   function NAND_Fetch (This  : aliased in out Instance;
                         Val   : T;
                         Order : Mem_Order := Seq_Cst)
-                        return T;
+                        return T
+     with Post => NAND_Fetch'Result = not (Value (This)'Old and Val)
+     and then Value (This) = NAND_Fetch'Result;
 
-   function Fetch_Add (This  : aliased Instance;
+   function Fetch_Add (This  : aliased in out Instance;
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
                        return T;
-   function Fetch_Sub (This  : aliased Instance;
+
+   function Fetch_Sub (This  : aliased in out Instance;
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
                        return T;
-   function Fetch_And (This  : aliased Instance;
+
+   function Fetch_And (This  : aliased in out Instance;
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
                        return T;
-   function Fetch_XOR (This  : aliased Instance;
+
+   function Fetch_XOR (This  : aliased in out Instance;
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
                        return T;
-   function Fetch_OR (This  : aliased Instance;
+
+   function Fetch_OR (This  : aliased in out Instance;
                       Val   : T;
                       Order : Mem_Order := Seq_Cst)
                       return T;
-   function Fetch_NAND (This  : aliased Instance;
+
+   function Fetch_NAND (This  : aliased in out Instance;
                         Val   : T;
                         Order : Mem_Order := Seq_Cst)
                         return T;
@@ -112,8 +271,19 @@ private
 
    type Instance is new T;
 
+   ----------
+   -- Init --
+   ----------
+
    function Init (Val : T) return Instance
    is (Instance (Val));
+
+   -----------
+   -- Value --
+   -----------
+
+   function Value (This : Instance) return T
+   is (T (This));
 
    pragma Inline (Init);
    pragma Inline (Load);

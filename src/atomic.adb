@@ -52,23 +52,6 @@ package body Atomic is
       Result := Intrinsic (This'Address, Order'Enum_Rep);
    end Test_And_Set;
 
-   --  ------------------
-   --  -- Test_And_Set --
-   --  ------------------
-   --
-   --  function Test_And_Set (This  : aliased in out Flag;
-   --                         Order : Mem_Order := Seq_Cst)
-   --                         return Boolean
-   --  is
-   --     function Intrinsic
-   --       (Ptr   : System.Address;
-   --        Model : Integer)
-   --        return Boolean;
-   --     pragma Import (Intrinsic, Intrinsic, "__atomic_test_and_set");
-   --  begin
-   --     return Intrinsic (This'Address, Order'Enum_Rep);
-   --  end Test_And_Set;
-   --
    -----------
    -- Clear --
    -----------

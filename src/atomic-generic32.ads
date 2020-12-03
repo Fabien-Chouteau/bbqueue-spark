@@ -1,7 +1,8 @@
+
 generic
    type T is mod <>;
 package Atomic.Generic32
-with Preelaborate, Spark_Mode => On
+with Preelaborate, Spark_Mode => Off
 is
    --  Based on GCC atomic built-ins. See:
    --  https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
@@ -28,13 +29,14 @@ is
    function Load (This  : aliased Instance;
                   Order : Mem_Order := Seq_Cst)
                   return T
-     with
-       Post => Load'Result = Value (This);
+     with Pre  => Order in Relaxed | Consume | Acquire | Seq_Cst,
+          Post => Load'Result = Value (This);
 
    procedure Store (This  : aliased in out Instance;
                     Val   : T;
                     Order : Mem_Order := Seq_Cst)
-     with Post => Value (This) = Val;
+     with Pre  => Order in Relaxed | Release | Seq_Cst,
+          Post => Value (This) = Val;
 
    -- SPARK compatible --
 
@@ -42,20 +44,22 @@ is
                        Val   : T;
                        Old   : out T;
                        Order : Mem_Order := Seq_Cst)
-     with Post => Old = Value (This)'Old
-     and then Value (This) = Val;
+     with Pre  => Order in Relaxed | Acquire | Release | Acq_Rel | Seq_Cst,
+          Post => Old = Value (This)'Old and then Value (This) = Val;
 
    procedure Compare_Exchange (This          : aliased in out Instance;
                                Expected      : T;
                                Desired       : T;
                                Weak          : Boolean;
                                Success       : out Boolean;
-                              Success_Order : Mem_Order := Seq_Cst;
-                              Failure_Order : Mem_Order := Seq_Cst)
-     with Post =>
-       Success = (Value (This)'Old = Expected)
-     and then
-       (if Success then Value (This) = Desired);
+                               Success_Order : Mem_Order := Seq_Cst;
+                               Failure_Order : Mem_Order := Seq_Cst)
+     with Pre  => Failure_Order in Relaxed | Consume | Acquire | Seq_Cst
+                  and then
+                  not Stronger (Failure_Order, Success_Order),
+          Post => Success = (Value (This)'Old = Expected)
+                  and then
+                  (if Success then Value (This) = Desired);
 
    procedure Add (This  : aliased in out Instance;
                   Val   : T;
@@ -170,7 +174,6 @@ is
                         Order : Mem_Order := Seq_Cst)
      with Post => Result = Value (This)'Old
      and Value (This) = not (Value (This)'Old and Val);
-
    -- NOT SPARK compatible --
 
    function Exchange (This  : aliased in out Instance;

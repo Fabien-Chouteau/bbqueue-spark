@@ -2,7 +2,7 @@ with System;
 with Interfaces;
 
 --  private with Atomic.Unsigned_32;
-private with Atomic.Generic32;
+private with Atomic.Generic32_SPARK;
 
 package BBqueue
 --  with Preelaborate
@@ -55,7 +55,7 @@ is
 private
 
    --  package Atomic_Count renames Atomic.Unsigned_32;
-   package Atomic_Count is new Atomic.Generic32 (Interfaces.Unsigned_32);
+   package Atomic_Count is new Atomic.Generic32_SPARK (Interfaces.Unsigned_32);
    use Atomic_Count;
 
    subtype Buffer_Index is Count range 1 .. Buffer_Size'Last;

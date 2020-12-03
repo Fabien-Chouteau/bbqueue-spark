@@ -1,6 +1,6 @@
 with System;
 
-package body Atomic.Generic32 is
+package body Atomic.Generic32 with SPARK_Mode => Off is
 
    Size_Suffix : constant String := "4";
    --  The value of this constant is the only difference between the package
@@ -40,6 +40,116 @@ package body Atomic.Generic32 is
    begin
       Intrinsic (This'Address, Val, Order'Enum_Rep);
    end Store;
+
+   ---------
+   -- Add --
+   ---------
+
+   procedure Add (This  : aliased in out Instance;
+                  Val   : T;
+                  Order : Mem_Order := Seq_Cst)
+   is
+      Unused : T;
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_add_fetch_" & Size_Suffix);
+   begin
+      Unused := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Add;
+
+   ---------
+   -- Sub --
+   ---------
+
+   procedure Sub (This  : aliased in out Instance;
+                  Val   : T;
+                  Order : Mem_Order := Seq_Cst)
+   is
+      Unused : T;
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_sub_fetch_" & Size_Suffix);
+   begin
+      Unused := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Sub;
+
+   ------------
+   -- Op_And --
+   ------------
+
+   procedure Op_And (This  : aliased in out Instance;
+                     Val   : T;
+                     Order : Mem_Order := Seq_Cst)
+   is
+      Unused : T;
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_and_fetch_" & Size_Suffix);
+   begin
+      Unused := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Op_And;
+
+   ------------
+   -- Op_XOR --
+   ------------
+
+   procedure Op_XOR (This  : aliased in out Instance;
+                     Val   : T;
+                     Order : Mem_Order := Seq_Cst)
+   is
+      Unused : T;
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_xor_fetch_" & Size_Suffix);
+   begin
+      Unused := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Op_XOR;
+
+   -----------
+   -- Op_OR --
+   -----------
+
+   procedure Op_OR (This  : aliased in out Instance;
+                    Val   : T;
+                    Order : Mem_Order := Seq_Cst)
+   is
+      Unused : T;
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic, "__atomic_or_fetch_" & Size_Suffix);
+   begin
+      Unused := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end Op_OR;
+
+   ----------
+   -- NAND --
+   ----------
+
+   procedure NAND (This  : aliased in out Instance;
+                   Val   : T;
+                   Order : Mem_Order := Seq_Cst)
+   is
+      Unused : T;
+      function Intrinsic
+        (Ptr   : System.Address;
+         Val   : T;
+         Model : Integer) return T;
+      pragma Import (Intrinsic, Intrinsic,
+                     "__atomic_nand_fetch_" & Size_Suffix);
+   begin
+      Unused := Intrinsic (This'Address, Val, Order'Enum_Rep);
+   end NAND;
+   -- NOT SPARK Compatible --
 
    --------------
    -- Exchange --
@@ -90,84 +200,6 @@ package body Atomic.Generic32 is
                         Success_Order'Enum_Rep,
                         Failure_Order'Enum_Rep);
    end Compare_Exchange;
-
-   ---------
-   -- Add --
-   ---------
-
-   procedure Add (This  : aliased in out Instance;
-                  Val   : T;
-                  Order : Mem_Order := Seq_Cst)
-   is
-      Unused : T;
-   begin
-      Unused := Fetch_Add (This, Val, Order);
-   end Add;
-
-   ---------
-   -- Sub --
-   ---------
-
-   procedure Sub (This  : aliased in out Instance;
-                  Val   : T;
-                  Order : Mem_Order := Seq_Cst)
-   is
-      Unused : T;
-   begin
-      Unused := Fetch_Sub (This, Val, Order);
-   end Sub;
-
-   ------------
-   -- Op_And --
-   ------------
-
-   procedure Op_And (This  : aliased in out Instance;
-                     Val   : T;
-                     Order : Mem_Order := Seq_Cst)
-   is
-      Unused : T;
-   begin
-      Unused := Fetch_And (This, Val, Order);
-   end Op_And;
-
-   ------------
-   -- Op_XOR --
-   ------------
-
-   procedure Op_XOR (This  : aliased in out Instance;
-                     Val   : T;
-                     Order : Mem_Order := Seq_Cst)
-   is
-      Unused : T;
-   begin
-      Unused := Fetch_XOR (This, Val, Order);
-   end Op_XOR;
-
-   -----------
-   -- Op_OR --
-   -----------
-
-   procedure Op_OR (This  : aliased in out Instance;
-                    Val   : T;
-                    Order : Mem_Order := Seq_Cst)
-   is
-      Unused : T;
-   begin
-      Unused := Fetch_OR (This, Val, Order);
-   end Op_OR;
-
-   ----------
-   -- NAND --
-   ----------
-
-   procedure NAND (This  : aliased in out Instance;
-                   Val   : T;
-                   Order : Mem_Order := Seq_Cst)
-   is
-      Unused : T;
-   begin
-      Unused := Fetch_NAND (This, Val, Order);
-   end NAND;
 
    ---------------
    -- Add_Fetch --
@@ -636,7 +668,8 @@ package body Atomic.Generic32 is
         (Ptr   : System.Address;
          Val   : T;
          Model : Integer) return T;
-      pragma Import (Intrinsic, Intrinsic, "__atomic_fetch_nand_" & Size_Suffix);
+      pragma Import (Intrinsic, Intrinsic,
+                     "__atomic_fetch_nand_" & Size_Suffix);
    begin
       Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
    end Fetch_NAND;

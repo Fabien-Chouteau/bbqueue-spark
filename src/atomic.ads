@@ -12,9 +12,9 @@ is
       --  memory_order_consume.
 
       Acquire,
-      --  Creates an inter-thread happens-before constraint from the release (or
-      --  stronger) semantic store to this acquire load. Can prevent hoisting of
-      --  code to before the operation.
+      --  Creates an inter-thread happens-before constraint from the release
+      --  (or stronger) semantic store to this acquire load. Can prevent
+      --  hoisting of code to before the operation.
 
       Release,
       --  Creates an inter-thread happens-before constraint to acquire (or
@@ -24,6 +24,16 @@ is
       Acq_Rel, -- Combines the effects of both Acquire and Release
 
       Seq_Cst); -- Enforces total ordering with all other Seq_Cst operations
+
+   for Mem_Order use
+     (Relaxed => 0,
+      Consume => 1,
+      Acquire => 2,
+      Release => 3,
+      Acq_Rel => 4,
+      Seq_Cst => 5);
+
+   function Stronger (A, B : Mem_Order) return Boolean;
 
    ----------
    -- Flag --
@@ -40,7 +50,8 @@ is
    function Set (This  : aliased Flag;
                  Order : Mem_Order := Seq_Cst)
                  return Boolean
-     with Post => Set'Result = Value (This);
+     with Pre  => Order in Relaxed | Consume | Acquire | Seq_Cst,
+          Post => Set'Result = Value (This);
 
    procedure Test_And_Set (This   : aliased in out Flag;
                            Result : out Boolean;
@@ -48,13 +59,10 @@ is
      with Post => Result = Value (This)'Old
      and then Value (This) = True;
 
-   --  function Test_And_Set (This  : aliased in out Flag;
-   --                         Order : Mem_Order := Seq_Cst)
-   --                         return Boolean;
-   --
    procedure Clear (This : aliased in out Flag;
                     Order : Mem_Order := Seq_Cst)
-   with Post => Value (This) = False;
+     with Pre  => Order in Relaxed | Release | Seq_Cst,
+          Post => Value (This) = False;
 
    function Value (This : Flag) return Boolean
      with Ghost;
@@ -62,6 +70,9 @@ is
    --  This doesn't use the atomic built-ins.
 
 private
+
+   function Stronger (A, B : Mem_Order) return Boolean
+   is (A > B);
 
    type Flag is mod 2 ** 8
      with Size => 8;
@@ -78,4 +89,5 @@ private
    pragma Inline (Test_And_Set);
    pragma Inline (Clear);
    pragma Inline (Value);
+
 end Atomic;

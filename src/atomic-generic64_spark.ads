@@ -1,8 +1,8 @@
 
 generic
    type T is mod <>;
-package Atomic.Generic16
-with Preelaborate, Spark_Mode => Off
+package Atomic.Generic64_SPARK
+with Preelaborate, Spark_Mode => On
 is
    --  Based on GCC atomic built-ins. See:
    --  https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
@@ -174,98 +174,6 @@ is
                         Order : Mem_Order := Seq_Cst)
      with Post => Result = Value (This)'Old
      and Value (This) = not (Value (This)'Old and Val);
-   -- NOT SPARK compatible --
-
-   function Exchange (This  : aliased in out Instance;
-                      Val   : T;
-                      Order : Mem_Order := Seq_Cst)
-                      return T
-     with Post => Exchange'Result = Value (This)'Old
-     and then Value (This) = Val;
-
-   function Compare_Exchange (This          : aliased in out Instance;
-                              Expected      : T;
-                              Desired       : T;
-                              Weak          : Boolean;
-                              Success_Order : Mem_Order := Seq_Cst;
-                              Failure_Order : Mem_Order := Seq_Cst)
-                              return Boolean
-     with Post =>
-       Compare_Exchange'Result = (Value (This)'Old = Expected)
-     and then
-       (if Compare_Exchange'Result then Value (This) = Desired);
-
-   function Add_Fetch (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T
-     with Post => Add_Fetch'Result = (Value (This)'Old + Val)
-     and then Value (This) = Add_Fetch'Result;
-
-   function Sub_Fetch (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T
-     with Post => Sub_Fetch'Result = (Value (This)'Old - Val)
-     and then Value (This) = Sub_Fetch'Result;
-
-   function And_Fetch (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T
-     with Post => And_Fetch'Result = (Value (This)'Old and Val)
-     and then Value (This) = And_Fetch'Result;
-
-   function XOR_Fetch (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T
-     with Post => XOR_Fetch'Result = (Value (This)'Old xor Val)
-     and then Value (This) = XOR_Fetch'Result;
-
-   function OR_Fetch (This  : aliased in out Instance;
-                      Val   : T;
-                      Order : Mem_Order := Seq_Cst)
-                      return T
-     with Post => OR_Fetch'Result = (Value (This)'Old or Val)
-     and then Value (This) = OR_Fetch'Result;
-
-   function NAND_Fetch (This  : aliased in out Instance;
-                        Val   : T;
-                        Order : Mem_Order := Seq_Cst)
-                        return T
-     with Post => NAND_Fetch'Result = not (Value (This)'Old and Val)
-     and then Value (This) = NAND_Fetch'Result;
-
-   function Fetch_Add (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T;
-
-   function Fetch_Sub (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T;
-
-   function Fetch_And (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T;
-
-   function Fetch_XOR (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T;
-
-   function Fetch_OR (This  : aliased in out Instance;
-                      Val   : T;
-                      Order : Mem_Order := Seq_Cst)
-                      return T;
-
-   function Fetch_NAND (This  : aliased in out Instance;
-                        Val   : T;
-                        Order : Mem_Order := Seq_Cst)
-                        return T;
 
 private
 
@@ -309,4 +217,4 @@ private
    pragma Inline (Fetch_OR);
    pragma Inline (Fetch_NAND);
 
-end Atomic.Generic16;
+end Atomic.Generic64_SPARK;
