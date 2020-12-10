@@ -1,17 +1,31 @@
-with Ada.Text_IO; use Ada.Text_IO;
+--  with Ada.Text_IO; use Ada.Text_IO;
 
 with Atomic; use Atomic;
 
 package body BBqueue
-with SPARK_Mode
+with SPARK_Mode => On
 is
+
+   --------------
+   -- Get_Addr --
+   --------------
+
+   function Get_Slice (This : Buffer;
+                       From : Buffer_Index;
+                       Size : Count)
+                       return Slices.Slice
+   is
+      pragma SPARK_Mode (Off);
+   begin
+      return Slices.Create (This.Buf (From)'Address, Size);
+   end Get_Slice;
 
    -----------
    -- Grant --
    -----------
 
    procedure Grant (This : in out Buffer;
-                    G    : in out Slice;
+                    G    : in out Write_Grant;
                     Size : Count)
    is
       Read, Write, Start : Count;
@@ -24,27 +38,21 @@ is
       Test_And_Set (This.Write_In_Progress, In_Progress, Acq_Rel);
       if In_Progress then
          G.Result := Grant_In_Progress;
-         G.Size   := 0;
-         G.Index  := 0;
+         G.Slice  := Slices.Empty_Slice;
          return;
       end if;
 
       if Size = 0 then
          Clear (This.Write_In_Progress, Release);
          G.Result := Empty;
-         G.Size   := 0;
-         G.Index  := 0;
-         This.Granted_Write_Size := 0;
+         G.Slice  := Slices.Empty_Slice;
          return;
       end if;
 
       if Size > This.Size then
          Clear (This.Write_In_Progress, Release);
          G.Result := Insufficient_Size;
-         G.Size   := 0;
-         G.Index  := 0;
-         This.Granted_Write_Size := 0;
-
+         G.Slice  := Slices.Empty_Slice;
          return;
       end if;
 
@@ -63,8 +71,7 @@ is
             --  Inverted, no room is available
             Clear (This.Write_In_Progress, Release);
             G.Result := Insufficient_Size;
-            G.Size   := 0;
-            G.Index  := 0;
+            G.Slice   := Slices.Empty_Slice;
             This.Granted_Write_Size := 0;
 
             return;
@@ -88,8 +95,7 @@ is
                --  Inverted, no room is available
                Clear (This.Write_In_Progress, Release);
                G.Result := Insufficient_Size;
-               G.Size   := 0;
-               G.Index  := 0;
+               G.Slice  := Slices.Empty_Slice;
                This.Granted_Write_Size := 0;
                return;
             end if;
@@ -107,10 +113,8 @@ is
 
       This.Granted_Write_Size := Size;
 
-      G.Result := Success;
-      G.Size   := Size;
-      G.Index  := This.Buf'First + Start;
-      --  G.Addr   := This.Buf (This.Buf'First + Start)'Address;
+      G.Result := Valid;
+      G.Slice  := Get_Slice (This, This.Buf'First + Start, Size);
    end Grant;
 
    ------------
@@ -118,6 +122,7 @@ is
    ------------
 
    procedure Commit (This   : in out Buffer;
+                     G      : in out Write_Grant;
                      Size   :        Count := Count'Last)
    is
       Used, Write, Last, New_Write : Count;
@@ -174,6 +179,9 @@ is
       --  Nothing granted anymore
       This.Granted_Write_Size := 0;
 
+      G.Result := Empty;
+      G.Slice   := Slices.Empty_Slice;
+
       --  Allow subsequent grants
       Clear (This.Write_In_Progress, Release);
 
@@ -184,7 +192,7 @@ is
    ----------
 
    procedure Read (This : in out Buffer;
-                   G    : in out Slice)
+                   G    : in out Read_Grant)
    is
       Read, Write, Last, Size : Count;
       In_Progress : Boolean;
@@ -193,8 +201,7 @@ is
       Test_And_Set (This.Read_In_Progress, In_Progress, Acq_Rel);
       if In_Progress then
          G.Result := Grant_In_Progress;
-         G.Size   := 0;
-         G.Index  := 0;
+         G.Slice   := Slices.Empty_Slice;
          return;
       end if;
 
@@ -221,9 +228,8 @@ is
 
       if Size = 0 then
          Clear (This.Read_In_Progress);
-         G.Result := Insufficient_Size;
-         G.Size   := 0;
-         G.Index  := 0;
+         G.Result := Empty;
+         G.Slice   := Slices.Empty_Slice;
          return;
       end if;
 
@@ -235,10 +241,8 @@ is
 
       This.Granted_Read_Size := Size;
 
-      G.Result := Success;
-      G.Size   := Size;
-      G.Index  := This.Buf'First + Read;
-      --  G.Addr   := This.Buf (This.Buf'First + Read)'Address;
+      G.Result := Valid;
+      G.Slice  := Get_Slice (This, This.Buf'First + Read, Size);
    end Read;
 
    -------------
@@ -246,6 +250,7 @@ is
    -------------
 
    procedure Release (This : in out Buffer;
+                      G    : in out Read_Grant;
                       Size :        Count := Count'Last)
    is
       Used : Count;
@@ -269,38 +274,41 @@ is
       --  Nothing granted anymore
       This.Granted_Read_Size := 0;
 
+      G.Result := Empty;
+      G.Slice  := Slices.Empty_Slice;
+
       --  Allow subsequent read
       Clear (This.Read_In_Progress, Release);
    end Release;
 
-   -----------
-   -- Print --
-   -----------
-
-   procedure Print (This : Buffer) is
-      procedure Print (Pos : Count; C : Character);
-      procedure Print (Pos : Count; C : Character) is
-      begin
-         for Index in Count range This.Buf'First .. This.Buf'Last + 1 loop
-            if Pos = Index then
-               Put (C);
-            else
-               Put (' ');
-            end if;
-         end loop;
-         New_Line;
-      end Print;
-      use type Interfaces.Unsigned_8;
-   begin
-      for Index in This.Buf'Range loop
-         Put (Character'Val (Character'Pos ('0') + (This.Buf (Index) mod 10)));
-      end loop;
-      New_Line;
-
-      Print (Atomic_Count.Load (This.Write, Seq_Cst) + 1, 'W');
-      Print (Atomic_Count.Load (This.Read, Seq_Cst) + 1, 'R');
-      Print (Atomic_Count.Load (This.Reserve, Seq_Cst) + 1, 'G');
-      Print (Atomic_Count.Load (This.Last, Seq_Cst) + 1, 'L');
-   end Print;
+   --  -----------
+   --  -- Print --
+   --  -----------
+   --
+   --  procedure Print (This : Buffer) is
+   --     procedure Print (Pos : Count; C : Character);
+   --     procedure Print (Pos : Count; C : Character) is
+   --     begin
+   --        for Index in Count range This.Buf'First .. This.Buf'Last + 1 loop
+   --           if Pos = Index then
+   --              Put (C);
+   --           else
+   --              Put (' ');
+   --           end if;
+   --        end loop;
+   --        New_Line;
+   --     end Print;
+   --     use type Interfaces.Unsigned_8;
+   --  begin
+   --     for Index in This.Buf'Range loop
+   --        Put (Character'Val (Character'Pos ('0') + (This.Buf (Index) mod 10)));
+   --     end loop;
+   --     New_Line;
+   --
+   --     Print (Atomic_Count.Load (This.Write, Seq_Cst) + 1, 'W');
+   --     Print (Atomic_Count.Load (This.Read, Seq_Cst) + 1, 'R');
+   --     Print (Atomic_Count.Load (This.Reserve, Seq_Cst) + 1, 'G');
+   --     Print (Atomic_Count.Load (This.Last, Seq_Cst) + 1, 'L');
+   --  end Print;
 
 end BBqueue;

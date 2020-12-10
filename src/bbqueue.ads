@@ -1,68 +1,100 @@
-with System;
 with Interfaces;
 
---  private with Atomic.Unsigned_32;
-private with Atomic.Generic32_SPARK;
+with Array_Slices;
+
+private with Atomic.Generic32;
 
 package BBqueue
---  with Preelaborate
-with SPARK_Mode
+with Preelaborate,
+     SPARK_Mode
 is
    use type Interfaces.Unsigned_32;
 
-   type Result_Kind is (Success, Grant_In_Progress, Insufficient_Size, Empty);
-
-   type Slice is limited private;
+   type Result_Kind is (Valid, Grant_In_Progress, Insufficient_Size, Empty);
 
    subtype Count is Interfaces.Unsigned_32;
 
-   subtype Buffer_Size is Count range 2 .. 55;
+   subtype Buffer_Size is Count range 1 .. Count'Last / 2;
+   --  To avoid interger overflow the buffer size is limited to (2^32)/2.
+   --  That is a buffer of 2 Gigabytes.
 
    type Buffer (Size : Buffer_Size) is limited private;
 
    -- Producer --
 
+   type Write_Grant is limited private;
+
    procedure Grant (This : in out Buffer;
-                    G    : in out Slice;
-                    Size : Count);
+                    G    : in out Write_Grant;
+                    Size : Count)
+     with Pre  => State (G) /= Valid,
+          Post => (if State (G) = Valid then Write_Grant_In_Progress (This));
 
    procedure Commit (This : in out Buffer;
-                     Size :        Count := Count'Last);
+                     G    : in out Write_Grant;
+                     Size :        Count := Count'Last)
+     with Pre  => State (G) = Valid,
+          Post => (if Write_Grant_In_Progress (This)'Old
+                   then State (G) = Empty
+                   else State (G) = Valid);
    --  Size can be smaller than the granted slice for partial commits
 
    -- Consumer --
 
+   type Read_Grant is limited private;
+
    procedure Read (This : in out Buffer;
-                   G    : in out Slice);
+                   G    : in out Read_Grant)
+     with Pre  => State (G) /= Valid,
+          Post => State (G) in Valid | Empty | Grant_In_Progress
+                  and then
+                  (if State (G) = Valid then Read_Grant_In_Progress (This));
 
    procedure Release (This : in out Buffer;
-                      Size :        Count := Count'Last);
+                      G    : in out Read_Grant;
+                      Size :        Count := Count'Last)
+     with Pre  => State (G) = Valid,
+          Post => (if Read_Grant_In_Progress (This)'Old
+                   then State (G) = Empty
+                   else State (G) = Valid);
 
-   function Empty_Slice return Slice
-     with Post => State (Empty_Slice'Result) = Empty;
+   -- Utils --
 
-   --  Tmp Internals
-   function State (G : Slice) return Result_Kind;
-   function Size (G : Slice) return Count
-     with Pre => State (G) = Success;
-   function Index (G : Slice) return Count
-     with Pre => State (G) = Success;
-   function Addr (G : Slice) return System.Address
-     with Pre => State (G) = Success;
+   function Empty return Write_Grant
+     with Post => State (Empty'Result) = Empty;
+   function Empty return Read_Grant
+     with Post => State (Empty'Result) = Empty;
 
-   procedure Print (This : Buffer);
-
-private
-
-   --  package Atomic_Count renames Atomic.Unsigned_32;
-   package Atomic_Count is new Atomic.Generic32_SPARK (Interfaces.Unsigned_32);
-   use Atomic_Count;
+   -- Slices --
 
    subtype Buffer_Index is Count range 1 .. Buffer_Size'Last;
    type Storage_Array is array (Buffer_Index range <>) of Interfaces.Unsigned_8;
 
+   package Slices is new Array_Slices (Count,
+                                       Buffer_Index,
+                                       Interfaces.Unsigned_8,
+                                       Storage_Array);
+
+   function State (G : Write_Grant) return Result_Kind;
+   function Slice (G : Write_Grant) return Slices.Slice
+     with Pre => State (G) = Valid;
+
+   function State (G : Read_Grant) return Result_Kind;
+   function Slice (G : Read_Grant) return Slices.Slice
+     with Pre => State (G) = Valid;
+
+   --  Contract helpers --
+
+   function Write_Grant_In_Progress (This : Buffer) return Boolean with Ghost;
+   function Read_Grant_In_Progress (This : Buffer) return Boolean with Ghost;
+
+private
+
+   package Atomic_Count is new Atomic.Generic32 (Count);
+   use Atomic_Count;
+
    type Buffer (Size : Buffer_Size) is limited record
-      Buf : Storage_Array (1 .. Size) := (others => 0);
+      Buf : aliased Storage_Array (1 .. Size) := (others => 0);
 
       Write : aliased Atomic_Count.Instance := Atomic_Count.Init (0);
       --  Where the next byte will be written
@@ -168,23 +200,46 @@ private
    is (Value (This.Write) < Value (This.Read))
      with Ghost;
 
-   type Slice is limited record
-      Result    : Result_Kind := Empty;
-      Size      : Count := 0;
-      Index     : Count := 0;
-      Addr      : System.Address := System.Null_Address;
+   type Write_Grant is limited record
+      Result : Result_Kind := Empty;
+      Slice  : Slices.Slice := Slices.Empty_Slice;
    end record;
+     --  with Invariant => (case Write_Grant.Result is
+     --                       when Valid => not Slices.Empty (Write_Grant.Slice),
+     --                       when others => Slices.Empty (Write_Grant.Slice));
 
-   function State (G : Slice) return Result_Kind
+   type Read_Grant is limited record
+      Result : Result_Kind := Empty;
+      Slice  : Slices.Slice := Slices.Empty_Slice;
+   end record;
+     --  with Invariant => (case Read_Grant.Result is
+     --                       when Valid => not Slices.Empty (Read_Grant.Slice),
+     --                       when others => Slices.Empty (Read_Grant.Slice));
+
+   function State (G : Write_Grant) return Result_Kind
    is (G.Result);
-   function Empty_Slice return Slice
+   function Empty return Write_Grant
    is (Result => Empty, others => <>);
-   function Size (G : Slice) return Count
-   is (G.Size);
-   function Index (G : Slice) return Count
-   is (G.Index);
-   function Addr (G : Slice) return System.Address
-   is (G.Addr);
+   function Slice (G : Write_Grant) return Slices.Slice
+   is (G.Slice);
+
+   function State (G : Read_Grant) return Result_Kind
+   is (G.Result);
+   function Empty return Read_Grant
+   is (Result => Empty, others => <>);
+   function Slice (G : Read_Grant) return Slices.Slice
+   is (G.Slice);
+
+   function Get_Slice (This : Buffer;
+                       From : Buffer_Index;
+                       Size : Count)
+                       return Slices.Slice
+     with Pre  => Size /= 0
+                  and then From in This.Buf'Range
+                  and then From + Size - 1 in This.Buf'Range,
+          Post => not Slices.Empty (Get_Slice'Result);
+
+   --  Contract helpers --
 
    ----------------------
    -- In_Readable_Area --
@@ -241,4 +296,19 @@ private
        Index in Value (This.Reserve) - This.Granted_Write_Size .. Value (This.Reserve) - 1
       )
    with Ghost;
+
+   -----------------------------
+   -- Write_Grant_In_Progress --
+   -----------------------------
+
+   function Write_Grant_In_Progress (This : Buffer) return Boolean
+   is (Atomic.Value (This.Write_In_Progress));
+
+   ----------------------------
+   -- Read_Grant_In_Progress --
+   ----------------------------
+
+   function Read_Grant_In_Progress (This : Buffer) return Boolean
+   is (Atomic.Value (This.Read_In_Progress));
+
 end BBqueue;
