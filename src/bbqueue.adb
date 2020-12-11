@@ -50,7 +50,12 @@ is
 
       if Already_Inverted then
 
-         if (Write + Size) < Read then
+         --  The original comparison is ((Write + Size) < Read), it is modified
+         --  to avoid integer overflow.
+         if Count'Last - Size >= Write
+           and then
+           (Write + Size) < Read
+         then
             --  Inverted, room is still available
             Start := Write;
          else
@@ -65,8 +70,12 @@ is
 
       else
 
-         if (Write + Size) <= Max then
-
+         --  The original comparison is ((Write + Size) <= Max), it is modified
+         --  to avoid integer overflow.
+         if Count'Last - Size >= Write
+           and then
+             (Write + Size) <= Max
+         then
             --  Non inverted condition
             Start := Write;
          else

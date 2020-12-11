@@ -23,20 +23,10 @@ is
    type Result_Kind is (Valid, Grant_In_Progress, Insufficient_Size, Empty);
 
    subtype Count is Storage_Count;
-
-   subtype Buffer_Size is Count range 1 .. Count'Last / 2;
-   --  To avoid interger overflow the buffer size is limited to (2^32)/2.
-   --  That is a buffer of 2 Gigabytes.
-
+   subtype Buffer_Size is Count range 1 .. Count'Last;
    subtype Buffer_Offset is Storage_Offset range 0 .. Count'Last - 1;
 
    type Offsets_Only (Size : Buffer_Size) is limited private;
-
-   type Slice_Rec is record
-      Length       : Count;
-      Start_Offset : Buffer_Offset;
-      End_Offset   : Buffer_Offset;
-   end record;
 
    -- Producer --
 
@@ -93,6 +83,12 @@ is
 
    -- Slices --
 
+   type Slice_Rec is record
+      Length       : Count;
+      Start_Offset : Buffer_Offset;
+      End_Offset   : Buffer_Offset;
+   end record;
+
    function State (G : Write_Grant) return Result_Kind;
    function Slice (G : Write_Grant) return Slice_Rec
      with Pre => State (G) = Valid;
@@ -131,10 +127,6 @@ private
      with Ghost;
 
    function In_Writable_Area (This   : Offsets_Only;
-                              Offset : Buffer_Offset)
-                              return Boolean
-     with Ghost;
-   function In_Reserved_Area (This : Offsets_Only;
                               Offset : Buffer_Offset)
                               return Boolean
      with Ghost;
@@ -202,21 +194,25 @@ private
                then not Is_Inverted (Offsets_Only)
                     and then Value (Write) >= Value (Read)
                     and then Value (Reserve) = Granted_Write_Size
-               else Value (Reserve) = Value (Write) + Granted_Write_Size)
+               else Value (Reserve) - Granted_Write_Size = Value (Write))
 
      --  Reserve is always in a writable area or else = Size
-     and then (In_Writable_Area (Offsets_Only, Value (Reserve))
-               or else Value (Reserve) = Size)
+     and then (Value (Reserve) = Size
+               or else In_Writable_Area (Offsets_Only, Value (Reserve)))
 
      and then (if Is_Inverted (Offsets_Only)
                then (Value (Write) + Granted_Write_Size <= Value (Read)
                      and then
                      Value (Reserve) <= Value (Read))
-               else Value (Read) + Granted_Read_Size <= Value (Write))
+               else Value (Read) <= Value (Write) - Granted_Read_Size)
 
      --  Read cannot be in reserved area
-     and then (not In_Reserved_Area (Offsets_Only, Value (Read))
-               or else Value (Read) = Value (Write))
+     and then (Value (Read) = Value (Write)
+               or else
+               (not (Granted_Write_Size /= 0
+                     and then
+                       Value (Read) in Value (Reserve) - Granted_Write_Size .. Value (Reserve) - 1
+                    )))
 
      --  Write grant bounds
      and then (if Is_Inverted (Offsets_Only)
@@ -323,16 +319,6 @@ private
                (Offset in Value (This.Write) .. This.Size - 1)
              or else
                (Offset in 0 .. Value (This.Read) - 1)));
-
-   ----------------------
-   -- In_Reserved_Area --
-   ----------------------
-
-   function In_Reserved_Area (This : Offsets_Only; Offset : Buffer_Offset) return Boolean
-   is (This.Granted_Write_Size /= 0
-       and then
-       Offset in Value (This.Reserve) - This.Granted_Write_Size .. Value (This.Reserve) - 1
-      );
 
    -----------------------
    -- Valid_Write_Slice --
