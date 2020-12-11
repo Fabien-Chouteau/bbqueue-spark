@@ -6,30 +6,16 @@ package body BBqueue
 with SPARK_Mode => On
 is
 
-   --------------
-   -- Get_Addr --
-   --------------
-
-   function Get_Slice (This : Buffer;
-                       From : Buffer_Index;
-                       Size : Count)
-                       return Slices.Slice
-   is
-      pragma SPARK_Mode (Off);
-   begin
-      return Slices.Create (This.Buf (From)'Address, Size);
-   end Get_Slice;
-
    -----------
    -- Grant --
    -----------
 
-   procedure Grant (This : in out Buffer;
+   procedure Grant (This : in out Offsets_Only;
                     G    : in out Write_Grant;
                     Size : Count)
    is
       Read, Write, Start : Count;
-      Max : constant Count := This.Buf'Last;
+      Max : constant Count := This.Size;
       Already_Inverted : Boolean;
       In_Progress : Boolean;
 
@@ -38,21 +24,21 @@ is
       Test_And_Set (This.Write_In_Progress, In_Progress, Acq_Rel);
       if In_Progress then
          G.Result := Grant_In_Progress;
-         G.Slice  := Slices.Empty_Slice;
+         G.Slice  := Empty_Slice;
          return;
       end if;
 
       if Size = 0 then
          Clear (This.Write_In_Progress, Release);
          G.Result := Empty;
-         G.Slice  := Slices.Empty_Slice;
+         G.Slice  := Empty_Slice;
          return;
       end if;
 
       if Size > This.Size then
          Clear (This.Write_In_Progress, Release);
          G.Result := Insufficient_Size;
-         G.Slice  := Slices.Empty_Slice;
+         G.Slice  := Empty_Slice;
          return;
       end if;
 
@@ -71,7 +57,7 @@ is
             --  Inverted, no room is available
             Clear (This.Write_In_Progress, Release);
             G.Result := Insufficient_Size;
-            G.Slice   := Slices.Empty_Slice;
+            G.Slice   := Empty_Slice;
             This.Granted_Write_Size := 0;
 
             return;
@@ -95,7 +81,7 @@ is
                --  Inverted, no room is available
                Clear (This.Write_In_Progress, Release);
                G.Result := Insufficient_Size;
-               G.Slice  := Slices.Empty_Slice;
+               G.Slice  := Empty_Slice;
                This.Granted_Write_Size := 0;
                return;
             end if;
@@ -114,19 +100,19 @@ is
       This.Granted_Write_Size := Size;
 
       G.Result := Valid;
-      G.Slice  := Get_Slice (This, This.Buf'First + Start, Size);
+      G.Slice  := (Size, Start, Start + Size - 1);
    end Grant;
 
    ------------
    -- Commit --
    ------------
 
-   procedure Commit (This   : in out Buffer;
+   procedure Commit (This   : in out Offsets_Only;
                      G      : in out Write_Grant;
                      Size   :        Count := Count'Last)
    is
       Used, Write, Last, New_Write : Count;
-      Max : constant Count := This.Buf'Length;
+      Max : constant Count := This.Size;
       Len : constant Count := This.Granted_Write_Size;
    begin
       --  If there is no grant in progress, return early. This
@@ -180,7 +166,7 @@ is
       This.Granted_Write_Size := 0;
 
       G.Result := Empty;
-      G.Slice   := Slices.Empty_Slice;
+      G.Slice  := Empty_Slice;
 
       --  Allow subsequent grants
       Clear (This.Write_In_Progress, Release);
@@ -191,7 +177,7 @@ is
    -- Read --
    ----------
 
-   procedure Read (This : in out Buffer;
+   procedure Read (This : in out Offsets_Only;
                    G    : in out Read_Grant)
    is
       Read, Write, Last, Size : Count;
@@ -201,7 +187,7 @@ is
       Test_And_Set (This.Read_In_Progress, In_Progress, Acq_Rel);
       if In_Progress then
          G.Result := Grant_In_Progress;
-         G.Slice   := Slices.Empty_Slice;
+         G.Slice  := Empty_Slice;
          return;
       end if;
 
@@ -229,7 +215,7 @@ is
       if Size = 0 then
          Clear (This.Read_In_Progress);
          G.Result := Empty;
-         G.Slice   := Slices.Empty_Slice;
+         G.Slice  := Empty_Slice;
          return;
       end if;
 
@@ -242,14 +228,14 @@ is
       This.Granted_Read_Size := Size;
 
       G.Result := Valid;
-      G.Slice  := Get_Slice (This, This.Buf'First + Read, Size);
+      G.Slice  := (Size, Read, Read + Size - 1);
    end Read;
 
    -------------
    -- Release --
    -------------
 
-   procedure Release (This : in out Buffer;
+   procedure Release (This : in out Offsets_Only;
                       G    : in out Read_Grant;
                       Size :        Count := Count'Last)
    is
@@ -275,7 +261,7 @@ is
       This.Granted_Read_Size := 0;
 
       G.Result := Empty;
-      G.Slice  := Slices.Empty_Slice;
+      G.Slice  := Empty_Slice;
 
       --  Allow subsequent read
       Clear (This.Read_In_Progress, Release);

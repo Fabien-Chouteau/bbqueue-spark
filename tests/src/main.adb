@@ -4,20 +4,25 @@ with System.Storage_Elements; use System.Storage_Elements;
 with BBqueue;
 with System; use System;
 
-with Interfaces;
-
 procedure Main
 with SPARK_Mode
 is
    use type BBqueue.Result_Kind;
 
+   Buffer : Storage_Array (0 .. 34) := (others => 0);
+   Q : aliased BBqueue.Offsets_Only (Buffer'Length);
+
    procedure Fill (WG : BBqueue.Write_Grant;
                    Val : Storage_Element)
-     with Pre => BBqueue.State (WG) = BBqueue.Valid;
+     with Pre => BBqueue.State (WG) = BBqueue.Valid
+     and then BBqueue.Valid_Slice (Q, BBqueue.Slice (WG));
+
    procedure Print (G : BBqueue.Write_Grant);
    procedure Print (G : BBqueue.Read_Grant);
    procedure Print_Content (RG : BBqueue.Read_Grant)
-     with Pre => BBqueue.State (RG) = BBqueue.Valid;
+     with Pre => BBqueue.State (RG) = BBqueue.Valid
+     and then BBqueue.Valid_Slice (Q, BBqueue.Slice (RG));
+   procedure Print_Buffer;
 
    ----------
    -- Fill --
@@ -26,18 +31,10 @@ is
    procedure Fill (WG : BBqueue.Write_Grant;
                    Val : Storage_Element)
    is
-      pragma SPARK_Mode (Off);
-
-      procedure Sub_Fill (Data : out BBqueue.Storage_Array);
-
-      procedure Sub_Fill (Data : out BBqueue.Storage_Array) is
-      begin
-         Data := (others => Interfaces.Unsigned_8 (Val));
-      end Sub_Fill;
-
-      S : BBqueue.Slices.Slice := BBqueue.Slice (WG);
+      S : constant BBqueue.Slice_Rec := BBqueue.Slice (WG);
    begin
-      BBqueue.Slices.Callbacks.Write (S, Sub_Fill'Access);
+      Buffer (Buffer'First + S.Start_Offset .. Buffer'First + S.End_Offset)
+                := (others => Val);
    end Fill;
 
    -----------
@@ -48,7 +45,7 @@ is
    begin
       Put ("Write Grant - " & BBqueue.State (G)'Img);
       if BBqueue.State (G) = BBqueue.Valid then
-         Put_Line ("  Size:" & BBqueue.Slices.Length (BBqueue.Slice (G))'Img);
+         Put_Line ("  Size:" & BBqueue.Slice (G).Length'Img);
       else
          New_Line;
       end if;
@@ -62,7 +59,7 @@ is
    begin
       Put ("Read Grant - " & BBqueue.State (G)'Img);
       if BBqueue.State (G) = BBqueue.Valid then
-         Put_Line ("  Size:" & BBqueue.Slices.Length (BBqueue.Slice (G))'Img);
+         Put_Line ("  Size:" & BBqueue.Slice (G).Length'Img);
       else
          New_Line;
       end if;
@@ -73,25 +70,27 @@ is
    -------------------
 
    procedure Print_Content (RG : BBqueue.Read_Grant) is
-      pragma SPARK_Mode (Off);
-
-      procedure Sub_Print (Data : BBqueue.Storage_Array);
-
-      procedure Sub_Print (Data : BBqueue.Storage_Array) is
-      begin
-         for Elt of Data loop
-            Put (Elt'Img);
-         end loop;
-         New_Line;
-      end Sub_Print;
-
-      S : constant BBqueue.Slices.Slice := BBqueue.Slice (RG);
+      S : constant BBqueue.Slice_Rec := BBqueue.Slice (RG);
    begin
-      Put ("Print " & BBqueue.Slices.Length (S)'Img & " bytes -> ");
-      BBqueue.Slices.Callbacks.Read (S, Sub_Print'Access);
+      Put ("Print " & S.Length'Img & " bytes -> ");
+      for Elt of Buffer (Buffer'First + S.Start_Offset .. Buffer'First + S.End_Offset) loop
+         Put (Elt'Img);
+      end loop;
+      New_Line;
    end Print_Content;
 
-   Q : aliased BBqueue.Buffer (35);
+   ------------------
+   -- Print_Buffer --
+   ------------------
+
+   procedure Print_Buffer is
+   begin
+      Put ("Buffer => ");
+      for Elt of Buffer loop
+         Put (Elt'Img);
+      end loop;
+      New_Line;
+   end Print_Buffer;
 
    WG : BBqueue.Write_Grant := BBqueue.Empty;
    RG : BBqueue.Read_Grant := BBqueue.Empty;
@@ -102,7 +101,7 @@ begin
    for X in 1 .. 7 loop
       Put_Line ("-- Loop" & X'Img & " --");
 
-      --  BBqueue.Print (Q);
+      Print_Buffer;
 
       BBqueue.Grant (Q, WG, 10);
       if BBqueue.State (WG) /= BBqueue.Valid then
@@ -111,16 +110,16 @@ begin
 
       Put ("BBqueue.Grant (Q, 10) -> ");
       Print (WG);
-      --  BBqueue.Print (Q);
+      Print_Buffer;
       Put_Line ("Fill (WG, " & V'Img & ")");
       Fill (WG, V);
       V := V + 1;
-      --  BBqueue.Print (Q);
+      Print_Buffer;
 
       BBqueue.Commit (Q, WG, 10);
       Put ("BBqueue.Commit (WG, 10); ->");
       Print (WG);
-      --  BBqueue.Print (Q);
+      Print_Buffer;
 
       BBqueue.Read (Q, RG);
       if BBqueue.State (RG) /= BBqueue.Valid then
@@ -130,12 +129,12 @@ begin
       Put ("BBqueue.Read (Q); -> ");
       Print (RG);
       Print_Content (RG);
-      --  BBqueue.Print (Q);
+      Print_Buffer;
 
       BBqueue.Release (Q, RG);
       Put ("BBqueue.Release (RG); -> ");
       Print (RG);
-      --  BBqueue.Print (Q);
+      Print_Buffer;
 
       pragma Assert (BBqueue.State (WG) = BBqueue.Empty);
       pragma Assert (BBqueue.State (RG) = BBqueue.Empty);
