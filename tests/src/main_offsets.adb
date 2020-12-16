@@ -4,7 +4,7 @@ with System.Storage_Elements; use System.Storage_Elements;
 with BBqueue;
 with System; use System;
 
-procedure Main
+procedure Main_Offsets
 with SPARK_Mode
 is
    use type BBqueue.Result_Kind;
@@ -33,7 +33,7 @@ is
    is
       S : constant BBqueue.Slice_Rec := BBqueue.Slice (WG);
    begin
-      Buffer (Buffer'First + S.Start_Offset .. Buffer'First + S.End_Offset)
+      Buffer (Buffer'First + S.From .. Buffer'First + S.To)
                 := (others => Val);
    end Fill;
 
@@ -72,8 +72,8 @@ is
    procedure Print_Content (RG : BBqueue.Read_Grant) is
       S : constant BBqueue.Slice_Rec := BBqueue.Slice (RG);
    begin
-      Put ("Print " & S.Length'Img & " bytes -> ");
-      for Elt of Buffer (Buffer'First + S.Start_Offset .. Buffer'First + S.End_Offset) loop
+      Put ("Print" & S.Length'Img & " bytes -> ");
+      for Elt of Buffer (Buffer'First + S.From .. Buffer'First + S.To) loop
          Put (Elt'Img);
       end loop;
       New_Line;
@@ -139,4 +139,4 @@ begin
       pragma Assert (BBqueue.State (WG) = BBqueue.Empty);
       pragma Assert (BBqueue.State (RG) = BBqueue.Empty);
    end loop;
-end Main;
+end Main_Offsets;

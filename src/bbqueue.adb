@@ -21,16 +21,16 @@ is
 
    begin
 
-      Test_And_Set (This.Write_In_Progress, In_Progress, Acq_Rel);
-      if In_Progress then
-         G.Result := Grant_In_Progress;
+      if Size = 0 then
+         G.Result := Empty;
          G.Slice  := Empty_Slice;
          return;
       end if;
 
-      if Size = 0 then
-         Clear (This.Write_In_Progress, Release);
-         G.Result := Empty;
+      Test_And_Set (This.Write_In_Progress, In_Progress, Acq_Rel);
+
+      if In_Progress then
+         G.Result := Grant_In_Progress;
          G.Slice  := Empty_Slice;
          return;
       end if;
@@ -187,7 +187,8 @@ is
    ----------
 
    procedure Read (This : in out Offsets_Only;
-                   G    : in out Read_Grant)
+                   G    : in out Read_Grant;
+                   Max  :        Count := Count'Last)
    is
       Read, Write, Last, Size : Count;
       In_Progress : Boolean;
@@ -220,6 +221,9 @@ is
       end if;
 
       Size := (if Write < Read then Last - Read else Write - Read);
+
+      --  Bound the slice with the maximum size requested by the user
+      Size := Count'Min (Size, Max);
 
       if Size = 0 then
          Clear (This.Read_In_Progress);

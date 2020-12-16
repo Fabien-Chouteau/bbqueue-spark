@@ -1,9 +1,10 @@
-with System.Storage_Elements; use System.Storage_Elements;
-private with Atomic.Generic_Signed64;
-
---  This unit only works with buffer offset without having an internal buffer.
+--  Based on James Munns' https://github.com/jamesmunns/bbqueue
+--
+--  BBQueue implements lock free, one producer one consumer, BipBuffers.
+--
+--  This unit only handles index offsets without having an internal buffer.
 --  It can be used to allocate slices of an existing array, e.g.:
-
+--
 --     Buf : Storage_Array (8 .. 64) := (others => 0);
 --     Q   : aliased Offsets_Only (Buf'Length);
 --     WG  : Write_Grant := BBqueue.Empty;
@@ -12,13 +13,17 @@ private with Atomic.Generic_Signed64;
 --     Write_Grant (Q, WG, 8);
 --     if State (WG) = Valid then
 --        S := Slice (WG);
---        Buf (Buf'First + S.Start_Offset .. Buf'First + S.End_Offset) := (others => 42);
+--        Buf (Buf'First + S.From .. Buf'First + S.To) := (others => 42);
 --     end if;
 --     Commit (Q, WG);
 
+with System.Storage_Elements; use System.Storage_Elements;
+private with Atomic.Generic_Signed64;
+
 package BBqueue
 with Preelaborate,
-     SPARK_Mode
+     SPARK_Mode,
+     Abstract_State => null
 is
    type Result_Kind is (Valid, Grant_In_Progress, Insufficient_Size, Empty);
 
@@ -38,10 +43,14 @@ is
      with Pre  => State (G) /= Valid,
           Post => State (G) in Valid | Empty | Grant_In_Progress | Insufficient_Size
                   and then
-                  (if State (G) = Valid
-                       then Write_Grant_In_Progress (This)
-                   and then Valid_Slice (This, Slice (G))
-                   and then Valid_Write_Slice (This, Slice (G)));
+                   (if Size = 0 then State (G) = Empty)
+                  and then
+                   (if State (G) = Valid
+                        then Write_Grant_In_Progress (This)
+                    and then Slice (G).Length = Size
+                    and then Valid_Slice (This, Slice (G))
+                    and then Valid_Write_Slice (This, Slice (G)));
+   --  Request indexes of a contiguous writeable slice of exactly Size elements
 
    procedure Commit (This : in out Offsets_Only;
                      G    : in out Write_Grant;
@@ -49,22 +58,26 @@ is
      with Pre  => State (G) = Valid,
           Post => (if Write_Grant_In_Progress (This)'Old
                    then State (G) = Empty
-                   else State (G) = Valid);
-   --  Size can be smaller than the granted slice for partial commits
+                       else State (G) = Valid);
+   --  Commit a writeable slice. Size can be smaller than the granted slice for
+   --  partial commits. The commited slice is then available for Read.
 
    -- Consumer --
 
    type Read_Grant is limited private;
 
    procedure Read (This : in out Offsets_Only;
-                   G    : in out Read_Grant)
+                   G    : in out Read_Grant;
+                   Max  :        Count := Count'Last)
      with Pre  => State (G) /= Valid,
           Post => State (G) in Valid | Empty | Grant_In_Progress
                   and then
-                  (if State (G) = Valid
-                       then Read_Grant_In_Progress (This)
-                   and then Valid_Slice (This, Slice (G))
-                   and then Valid_Read_Slice (This, Slice (G)));
+                   (if State (G) = Valid
+                        then Read_Grant_In_Progress (This)
+                    and then Slice (G).Length <= Max
+                    and then Valid_Slice (This, Slice (G))
+                    and then Valid_Read_Slice (This, Slice (G)));
+   --  Request indexes of a contiguous readable slice of up to Max elements
 
    procedure Release (This : in out Offsets_Only;
                       G    : in out Read_Grant;
@@ -72,7 +85,9 @@ is
      with Pre  => State (G) = Valid,
           Post => (if Read_Grant_In_Progress (This)'Old
                    then State (G) = Empty
-                   else State (G) = Valid);
+                       else State (G) = Valid);
+   --  Release a readable slice. Size can be smaller than the granted slice for
+   --  partial releases.
 
    -- Utils --
 
@@ -84,9 +99,9 @@ is
    -- Slices --
 
    type Slice_Rec is record
-      Length       : Count;
-      Start_Offset : Buffer_Offset;
-      End_Offset   : Buffer_Offset;
+      Length : Count;
+      From   : Buffer_Offset;
+      To     : Buffer_Offset;
    end record;
 
    function State (G : Write_Grant) return Result_Kind;
@@ -100,10 +115,10 @@ is
    --  Contract helpers --
 
    function Valid_Slice (This : Offsets_Only; Slice : Slice_Rec) return Boolean
-   is (Slice.Start_Offset <= Slice.End_Offset
-       and then Slice.Length = Slice.End_Offset - Slice.Start_Offset + 1
-       and then Slice.Start_Offset in 0 .. This.Size - 1
-       and then Slice.End_Offset in 0 .. This.Size - 1)
+   is (Slice.From <= Slice.To
+       and then Slice.Length = Slice.To - Slice.From + 1
+       and then Slice.From in 0 .. This.Size - 1
+       and then Slice.To in 0 .. This.Size - 1)
      with Ghost;
    --  A valid slice contains offsets within the bounds of the array range.
    --  This ensures that:
@@ -243,9 +258,11 @@ private
    is (Value (This.Write) < Value (This.Read))
      with Ghost;
 
+   Empty_Slice : constant Slice_Rec := (0, 0, 0);
+
    type Write_Grant is limited record
       Result : Result_Kind := Empty;
-      Slice  : Slice_Rec := (0, 0, 0);
+      Slice  : Slice_Rec := Empty_Slice;
    end record;
      --  with Invariant => (case Write_Grant.Result is
      --                       when Valid => not Slices.Empty (Write_Grant.Slice),
@@ -253,7 +270,7 @@ private
 
    type Read_Grant is limited record
       Result : Result_Kind := Empty;
-      Slice  : Slice_Rec := (0, 0, 0);
+      Slice  : Slice_Rec := Empty_Slice;
    end record;
      --  with Invariant => (case Read_Grant.Result is
      --                       when Valid => not Slices.Empty (Read_Grant.Slice),
@@ -272,8 +289,6 @@ private
    is (Result => Empty, others => <>);
    function Slice (G : Read_Grant) return Slice_Rec
    is (G.Slice);
-
-   Empty_Slice : constant Slice_Rec := (0, 0, 0);
 
    --  Contract helpers --
 
@@ -326,13 +341,13 @@ private
 
    function Valid_Write_Slice (This : Offsets_Only; Slice : Slice_Rec) return Boolean
    is (Valid_Slice (This, Slice)
-       and then In_Writable_Area (This, Slice.Start_Offset)
-       and then In_Writable_Area (This, Slice.End_Offset));
+       and then In_Writable_Area (This, Slice.From)
+       and then In_Writable_Area (This, Slice.To));
 
    function Valid_Read_Slice (This : Offsets_Only; Slice : Slice_Rec) return Boolean
    is (Valid_Slice (This, Slice)
-       and then In_Readable_Area (This, Slice.Start_Offset)
-       and then In_Readable_Area (This, Slice.End_Offset));
+       and then In_Readable_Area (This, Slice.From)
+       and then In_Readable_Area (This, Slice.To));
 
    -----------------------------
    -- Write_Grant_In_Progress --

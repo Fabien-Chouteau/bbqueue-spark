@@ -1,6 +1,6 @@
 generic
-   type T is mod <>;
-package Atomic.Generic8
+   type T is range <>;
+package Atomic.Generic_Signed8
 with Preelaborate, Spark_Mode => On
 is
    --  Based on GCC atomic built-ins. See:
@@ -68,26 +68,6 @@ is
                   Order : Mem_Order := Seq_Cst)
      with Post => Value (This) = Value (This)'Old - Val;
 
-   procedure Op_And (This  : aliased in out Instance;
-                     Val   : T;
-                     Order : Mem_Order := Seq_Cst)
-     with Post => Value (This) = (Value (This)'Old and Val);
-
-   procedure Op_XOR (This  : aliased in out Instance;
-                     Val   : T;
-                     Order : Mem_Order := Seq_Cst)
-     with Post => Value (This) = (Value (This)'Old xor Val);
-
-   procedure Op_OR (This  : aliased in out Instance;
-                    Val   : T;
-                    Order : Mem_Order := Seq_Cst)
-     with Post => Value (This) = (Value (This)'Old or Val);
-
-   procedure NAND (This  : aliased in out Instance;
-                   Val   : T;
-                   Order : Mem_Order := Seq_Cst)
-     with Post => Value (This) = not (Value (This)'Old and Val);
-
    procedure Add_Fetch (This  : aliased in out Instance;
                         Val   : T;
                         Result : out T;
@@ -100,34 +80,6 @@ is
                         Result : out T;
                         Order : Mem_Order := Seq_Cst)
      with Post => Result = (Value (This)'Old - Val)
-     and then Value (This) = Result;
-
-   procedure And_Fetch (This  : aliased in out Instance;
-                       Val   : T;
-                        Result : out T;
-                        Order : Mem_Order := Seq_Cst)
-     with Post => Result = (Value (This)'Old and Val)
-     and then Value (This) = Result;
-
-   procedure XOR_Fetch (This  : aliased in out Instance;
-                       Val   : T;
-                        Result : out T;
-                        Order : Mem_Order := Seq_Cst)
-     with Post => Result = (Value (This)'Old xor Val)
-     and then Value (This) = Result;
-
-   procedure OR_Fetch (This  : aliased in out Instance;
-                      Val   : T;
-                        Result : out T;
-                        Order : Mem_Order := Seq_Cst)
-     with Post => Result = (Value (This)'Old or Val)
-     and then Value (This) = Result;
-
-   procedure NAND_Fetch (This  : aliased in out Instance;
-                        Val   : T;
-                        Result : out T;
-                        Order : Mem_Order := Seq_Cst)
-     with Post => Result = not (Value (This)'Old and Val)
      and then Value (This) = Result;
 
    procedure Fetch_Add (This  : aliased in out Instance;
@@ -143,34 +95,6 @@ is
                         Order : Mem_Order := Seq_Cst)
      with Post => Result = Value (This)'Old
      and Value (This) = (Value (This)'Old - Val);
-
-   procedure Fetch_And (This  : aliased in out Instance;
-                        Val   : T;
-                        Result : out T;
-                        Order : Mem_Order := Seq_Cst)
-     with Post => Result = Value (This)'Old
-     and Value (This) = (Value (This)'Old and Val);
-
-   procedure Fetch_XOR (This  : aliased in out Instance;
-                       Val   : T;
-                        Result : out T;
-                        Order : Mem_Order := Seq_Cst)
-     with Post => Result = Value (This)'Old
-     and Value (This) = (Value (This)'Old xor Val);
-
-   procedure Fetch_OR (This  : aliased in out Instance;
-                      Val   : T;
-                        Result : out T;
-                        Order : Mem_Order := Seq_Cst)
-     with Post => Result = Value (This)'Old
-     and Value (This) = (Value (This)'Old or Val);
-
-   procedure Fetch_NAND (This  : aliased in out Instance;
-                        Val   : T;
-                        Result : out T;
-                        Order : Mem_Order := Seq_Cst)
-     with Post => Result = Value (This)'Old
-     and Value (This) = not (Value (This)'Old and Val);
 
    -- NOT SPARK compatible --
 
@@ -211,38 +135,6 @@ is
           Post => Sub_Fetch'Result = (Value (This)'Old - Val)
      and then Value (This) = Sub_Fetch'Result;
 
-   function And_Fetch (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T
-     with SPARK_Mode => Off,
-          Post => And_Fetch'Result = (Value (This)'Old and Val)
-     and then Value (This) = And_Fetch'Result;
-
-   function XOR_Fetch (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T
-     with SPARK_Mode => Off,
-          Post => XOR_Fetch'Result = (Value (This)'Old xor Val)
-     and then Value (This) = XOR_Fetch'Result;
-
-   function OR_Fetch (This  : aliased in out Instance;
-                      Val   : T;
-                      Order : Mem_Order := Seq_Cst)
-                      return T
-     with SPARK_Mode => Off,
-          Post => OR_Fetch'Result = (Value (This)'Old or Val)
-     and then Value (This) = OR_Fetch'Result;
-
-   function NAND_Fetch (This  : aliased in out Instance;
-                        Val   : T;
-                        Order : Mem_Order := Seq_Cst)
-                        return T
-     with SPARK_Mode => Off,
-          Post => NAND_Fetch'Result = not (Value (This)'Old and Val)
-     and then Value (This) = NAND_Fetch'Result;
-
    function Fetch_Add (This  : aliased in out Instance;
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
@@ -253,30 +145,6 @@ is
                        Val   : T;
                        Order : Mem_Order := Seq_Cst)
                        return T
-     with SPARK_Mode => Off;
-
-   function Fetch_And (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T
-     with SPARK_Mode => Off;
-
-   function Fetch_XOR (This  : aliased in out Instance;
-                       Val   : T;
-                       Order : Mem_Order := Seq_Cst)
-                       return T
-     with SPARK_Mode => Off;
-
-   function Fetch_OR (This  : aliased in out Instance;
-                      Val   : T;
-                      Order : Mem_Order := Seq_Cst)
-                      return T
-     with SPARK_Mode => Off;
-
-   function Fetch_NAND (This  : aliased in out Instance;
-                        Val   : T;
-                        Order : Mem_Order := Seq_Cst)
-                        return T
      with SPARK_Mode => Off;
 
 private
@@ -309,17 +177,4 @@ private
    pragma Inline (Fetch_Add);
    pragma Inline (Fetch_Sub);
 
-   pragma Inline (Op_And);
-   pragma Inline (Op_XOR);
-   pragma Inline (Op_OR);
-   pragma Inline (NAND);
-   pragma Inline (And_Fetch);
-   pragma Inline (XOR_Fetch);
-   pragma Inline (OR_Fetch);
-   pragma Inline (NAND_Fetch);
-   pragma Inline (Fetch_And);
-   pragma Inline (Fetch_XOR);
-   pragma Inline (Fetch_OR);
-   pragma Inline (Fetch_NAND);
-
-end Atomic.Generic8;
+end Atomic.Generic_Signed8;

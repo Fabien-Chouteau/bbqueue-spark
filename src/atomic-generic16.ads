@@ -1,4 +1,3 @@
-
 generic
    type T is mod <>;
 package Atomic.Generic16
@@ -305,18 +304,19 @@ private
    pragma Inline (Compare_Exchange);
    pragma Inline (Add);
    pragma Inline (Sub);
+   pragma Inline (Add_Fetch);
+   pragma Inline (Sub_Fetch);
+   pragma Inline (Fetch_Add);
+   pragma Inline (Fetch_Sub);
+
    pragma Inline (Op_And);
    pragma Inline (Op_XOR);
    pragma Inline (Op_OR);
    pragma Inline (NAND);
-   pragma Inline (Add_Fetch);
-   pragma Inline (Sub_Fetch);
    pragma Inline (And_Fetch);
    pragma Inline (XOR_Fetch);
    pragma Inline (OR_Fetch);
    pragma Inline (NAND_Fetch);
-   pragma Inline (Fetch_Add);
-   pragma Inline (Fetch_Sub);
    pragma Inline (Fetch_And);
    pragma Inline (Fetch_XOR);
    pragma Inline (Fetch_OR);

@@ -1,12 +1,8 @@
-
 generic
    type T is range <>;
 package Atomic.Generic_Signed64
 with Preelaborate, Spark_Mode => On
 is
-
-   Type_Size_In_Bytes : constant := 8;
-
    --  Based on GCC atomic built-ins. See:
    --  https://gcc.gnu.org/onlinedocs/gcc/_005f_005fatomic-Builtins.html
    --

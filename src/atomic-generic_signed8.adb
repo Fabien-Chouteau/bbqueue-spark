@@ -1,10 +1,10 @@
 with System;
 
-package body Atomic.Generic_Signed64
+package body Atomic.Generic_Signed8
 with SPARK_Mode => Off
 is
 
-   Size_Suffix : constant String := "8";
+   Size_Suffix : constant String := "1";
    --  The value of this constant is the only difference between the package
    --  bodies for the different data sizes (8, 16, 32, 64).
 
@@ -321,4 +321,4 @@ is
       return Intrinsic (This'Address, Val, Order'Enum_Rep);
    end Fetch_Sub;
 
-end Atomic.Generic_Signed64;
+end Atomic.Generic_Signed8;

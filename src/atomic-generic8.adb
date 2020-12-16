@@ -419,7 +419,7 @@ is
       Result := Intrinsic (This'Address, Val, Order'Enum_Rep);
    end Fetch_NAND;
 
-      -- NOT SPARK Compatible --
+   -- NOT SPARK Compatible --
 
    --------------
    -- Exchange --
