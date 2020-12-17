@@ -54,7 +54,7 @@ is
          --  to avoid integer overflow.
          if Count'Last - Size >= Write
            and then
-           (Write + Size) < Read
+           (Write + Size + 1_000_000) < Read
          then
             --  Inverted, room is still available
             Start := Write;
