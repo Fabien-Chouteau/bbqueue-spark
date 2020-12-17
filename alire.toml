@@ -11,3 +11,6 @@ website = "https://github.com/Fabien-Chouteau/bbqueue-ada"
 
 long-description = """An Ada implementation of James Munns' BBQueue. See
 https://github.com/jamesmunns/bbqueue"""
+
+[[depends-on]]
+atomic = "*"
