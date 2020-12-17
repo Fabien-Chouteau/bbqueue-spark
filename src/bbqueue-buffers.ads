@@ -5,7 +5,7 @@
 --     WG  : Write_Grant := Empty;
 --     S   : Slice_Rec;
 --  begin
---     Write_Grant (Q, WG, 8);
+--     Grant (Q, WG, 8);
 --     if State (WG) = Valid then
 --        declare
 --           B : Storage_Array (1 .. Slice (WG).Length)

@@ -9,9 +9,9 @@
 --     RG  : Read_Grant := Empty;
 --     S   : Slice_Rec;
 --  begin
---     Write_Grant (Q, WG, 8); -- Get a worst case grant of size 8
+--     Grant (Q, WG, 8); -- Get a worst case grant of size 8
 --     Commit (Q, WG, 4); -- Only commit 4
---     Write_Grant (Q, WG, 8); -- Get a worst case grant of size 8
+--     Grant (Q, WG, 8); -- Get a worst case grant of size 8
 --     Commit (Q, WG, 5); -- Only commit 5
 --     Read (W, RG); -- Returns a grant of size 4
 

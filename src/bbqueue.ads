@@ -10,7 +10,7 @@
 --     WG  : Write_Grant := BBqueue.Empty;
 --     S   : Slice_Rec;
 --  begin
---     Write_Grant (Q, WG, 8);
+--     Grant (Q, WG, 8);
 --     if State (WG) = Valid then
 --        S := Slice (WG);
 --        Buf (Buf'First + S.From .. Buf'First + S.To) := (others => 42);
