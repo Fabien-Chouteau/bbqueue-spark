@@ -1,0 +1,52 @@
+name: Build and test
+on: [pull_request, push]
+
+jobs:
+  linux-build:
+    name: Build and test on Linux
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: ada-actions/toolchain@ce2020
+      with:
+        distrib: community
+    - uses: alire-project/setup-alire@latest-stable
+    - uses: reviewdog/action-setup@v1
+
+    - name: Build
+      env:
+        REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        status=0
+        GPRBUILD_FLAGS="-XBBQUEUE_COMPILE_CHECKS=enabled -XBBQUEUE_RUNTIME_CHECKS=enabled -XBBQUEUE_STYLE_CHECKS=enabled -XBBQUEUE_CONTRACTS=enabled"
+        gprbuild -P tests/tests.gpr ${GPRBUILD_FLAGS} -gnatef > output.txt 2>&1 || status=$?
+        cat output.txt
+        cat output.txt | reviewdog -efm="%f:%l:%c: %m" -diff="git diff master" --reporter=github-pr-review
+        # Check for errors
+        if [ $status -ne 0 ]; then
+           echo "ERROR: gprbuild returned $status"
+           # This will cause the workflow to exit with $status
+           bash -c "exit $status"
+        fi
+
+    - name: Alire build
+      run: alr build
+
+    - name: Prove
+      env:
+        REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        status=0
+        gnatprove -Ptests/tests.gpr -j0 --ide-progress-bar --level=4 > output.txt 2>&1 || status=$?
+        cat output.txt
+        cat output.txt | reviewdog -efm="%f:%l:%c: %m" -diff="git diff master" --reporter=github-pr-review
+        # Check for errors
+        if [ $status -ne 0 ]; then
+           echo "ERROR: gnatprove returned $status"
+           # This will cause the workflow to exit with $status
+           bash -c "exit $status"
+        fi
+ 
+    - run: ./tests/obj/main_offsets
+    - run: ./tests/obj/main_buffer
+    - run: ./tests/obj/main_framed
