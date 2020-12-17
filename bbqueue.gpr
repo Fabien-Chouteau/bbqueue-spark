@@ -1,3 +1,7 @@
+-- begin auto-gpr-with --
+--  This section was automatically added by Alire
+with "atomic.gpr";
+-- end auto-gpr-with --
 project BBqueue is
 
    for Library_Name use "Bbqueue";
