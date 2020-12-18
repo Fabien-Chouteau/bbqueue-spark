@@ -1,4 +1,4 @@
-# bbqueue-ada
+# bbqueue-SPARK
 ![Alire badge](https://img.shields.io/endpoint?url=https://alire.ada.dev/badges/bbqueue.json)
 
 An Ada/SPARK proved implementation of James Munns' BBQueue
