@@ -1,4 +1,4 @@
---  This unit is based on BBQueue.Buffers and uses markers in the buffer to
+--  This unit is based on BBqueue.Buffers and uses markers in the buffer to
 --  track the size of each commited write grants. The size of consequent read
 --  grants will conrespond to the sizes of commited write grants.
 --

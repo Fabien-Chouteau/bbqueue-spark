@@ -1,5 +1,5 @@
---  This unit is based on BBQueue.Offsets_Only and embeds an internal buffer.
---  It provides directly usable slice of memory from its internal buffer:
+--  This unit is based on BBqueue.Offsets_Only and embeds an internal buffer.
+--  It provides directly usable slices of memory from its internal buffer:
 --
 --     Q   : aliased Buffer (64);
 --     WG  : Write_Grant := Empty;

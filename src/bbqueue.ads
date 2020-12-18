@@ -1,6 +1,6 @@
 --  Based on James Munns' https://github.com/jamesmunns/bbqueue
 --
---  BBQueue implements lock free, one producer one consumer, BipBuffers.
+--  BBqueue implements lock free, one producer one consumer, BipBuffers.
 --
 --  This unit only handles index offsets without having an internal buffer.
 --  It can be used to allocate slices of an existing array, e.g.:

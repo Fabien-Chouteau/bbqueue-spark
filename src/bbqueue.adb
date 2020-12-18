@@ -280,34 +280,4 @@ is
       Clear (This.Read_In_Progress, Release);
    end Release;
 
-   --  -----------
-   --  -- Print --
-   --  -----------
-   --
-   --  procedure Print (This : Buffer) is
-   --     procedure Print (Pos : Count; C : Character);
-   --     procedure Print (Pos : Count; C : Character) is
-   --     begin
-   --        for Index in Count range This.Buf'First .. This.Buf'Last + 1 loop
-   --           if Pos = Index then
-   --              Put (C);
-   --           else
-   --              Put (' ');
-   --           end if;
-   --        end loop;
-   --        New_Line;
-   --     end Print;
-   --     use type Interfaces.Unsigned_8;
-   --  begin
-   --     for Index in This.Buf'Range loop
-   --        Put (Character'Val (Character'Pos ('0') + (This.Buf (Index) mod 10)));
-   --     end loop;
-   --     New_Line;
-   --
-   --     Print (Atomic_Count.Load (This.Write, Seq_Cst) + 1, 'W');
-   --     Print (Atomic_Count.Load (This.Read, Seq_Cst) + 1, 'R');
-   --     Print (Atomic_Count.Load (This.Reserve, Seq_Cst) + 1, 'G');
-   --     Print (Atomic_Count.Load (This.Last, Seq_Cst) + 1, 'L');
-   --  end Print;
-
 end BBqueue;
