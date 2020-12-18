@@ -7,10 +7,10 @@ authors = ["Fabien Chouteau"]
 maintainers = ["Fabien Chouteau <chouteau@adacore.com>"]
 maintainers-logins = ["Fabien-Chouteau"]
 tags = ["spark", "nostd", "embedded", "lockfree", "dma", "bipbuffer"]
-website = "https://github.com/Fabien-Chouteau/bbqueue-ada"
+website = "https://github.com/Fabien-Chouteau/bbqueue-spark"
 
-long-description = """An Ada implementation of James Munns' BBQueue. See
-https://github.com/jamesmunns/bbqueue"""
+long-description = """An Ada/SPARK proved implementation of James Munns'
+BBQueue (https://github.com/jamesmunns/bbqueue)"""
 
 [[depends-on]]
 atomic = "*"
