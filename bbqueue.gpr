@@ -12,6 +12,13 @@ project BBqueue is
    for Create_Missing_Dirs use "True";
    for Library_Dir use "lib";
 
+   type Target_Word_Size is ("32", "64");
+   Word_Size : Target_Word_Size := external ("BBQUEUE_WORD_SIZE", "64");
+
+   package Naming is
+      for Spec ("Atomic_Storage_Count") use "atomic_storage_count-" & Word_Size & ".ads";
+   end Naming;
+
    type Library_Type_Type is ("relocatable", "static", "static-pic");
    Library_Type : Library_Type_Type :=
      external ("BBQUEUE_LIBRARY_TYPE", external ("LIBRARY_TYPE", "static"));
@@ -81,6 +88,7 @@ project BBqueue is
         Style_Checks_Switches &
         Contracts_Switches &
       ("-gnatwC", -- Suppress warnings on conditionals (lower bound test optimized away)
+       "-gnatw.X", -- Disable warnings for No_Exception_Propagation
        "-gnatQ");  -- Don't quit. Generate ALI and tree files even if illegalities
    end Compiler;
 

@@ -18,7 +18,9 @@
 --     Commit (Q, WG);
 
 with System.Storage_Elements; use System.Storage_Elements;
-private with Atomic.Generic_Signed64;
+
+private with Atomic;
+private with Atomic_Storage_Count;
 
 package BBqueue
 with Preelaborate,
@@ -146,7 +148,7 @@ private
                               return Boolean
      with Ghost;
 
-   package Atomic_Count is new Atomic.Generic_Signed64 (Count);
+   package Atomic_Count renames Atomic_Storage_Count;
    use Atomic_Count;
 
    type Offsets_Only (Size : Buffer_Size) is limited record
