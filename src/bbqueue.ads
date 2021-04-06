@@ -332,7 +332,7 @@ private
        else (
              --  |====R---------W=====|
              --  Not Inverted (R <= W):
-             --  We can write between W .. Last - 1, or 0 .. R - 1 if we invert
+             --  We can write between W .. Size - 1, or 0 .. R - 1 if we invert
                (Offset in Value (This.Write) .. This.Size - 1)
              or else
                (Offset in 0 .. Value (This.Read) - 1)));
