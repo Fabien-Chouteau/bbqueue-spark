@@ -14,8 +14,8 @@
 --     if State (WG) = Valid then
 --        S := Slice (WG);
 --        Buf (Buf'First + S.From .. Buf'First + S.To) := (others => 42);
+--        Commit (Q, WG);
 --     end if;
---     Commit (Q, WG);
 
 with System.Storage_Elements; use System.Storage_Elements;
 
