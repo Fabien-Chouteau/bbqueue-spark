@@ -13,8 +13,8 @@
 --        begin
 --           B := (others => 42);
 --        end;
+--        Commit (Q, WG);
 --     end if;
---     Commit (Q, WG);
 
 with System;
 
