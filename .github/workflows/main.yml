@@ -40,7 +40,7 @@ jobs:
       run: |
         eval `alr printenv --unix`
         status=0
-        gnatprove -Ptests/tests.gpr -j0 --ide-progress-bar --level=4 --checks-as-errors -cargs -gnatef > output.txt 2>&1 || status=$?
+        gnatprove -Ptests/tests.gpr -j0 --level=4 --checks-as-errors -cargs -gnatef > output.txt 2>&1 || status=$?
         cat output.txt
         cat output.txt | reviewdog -efm="%f:%l:%c: %m" -diff="git diff master" --reporter=github-pr-review
         # Check for errors
