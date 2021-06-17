@@ -14,3 +14,4 @@ BBQueue (https://github.com/jamesmunns/bbqueue)"""
 
 [[depends-on]]
 atomic = "~0.3"
+gnat = ">=10"
