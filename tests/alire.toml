@@ -1,0 +1,10 @@
+name = "tests"
+description = ""
+version = "0.0.0"
+executables = ["main_offsets", "main_buffer", "main_framed"]
+
+[[depends-on]]
+bbqueue = "*"
+
+[[pins]]
+bbqueue = {path = "../"}

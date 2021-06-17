@@ -1,4 +1,6 @@
-with "../bbqueue.gpr";
+with "config/tests_config.gpr";
+
+with "bbqueue.gpr";
 
 project Tests is
    for Source_Dirs use ("src");
