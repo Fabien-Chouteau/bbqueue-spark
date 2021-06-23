@@ -6,5 +6,12 @@ executables = ["main_offsets", "main_buffer", "main_framed"]
 [[depends-on]]
 bbqueue = "*"
 
+[gpr-set-externals]
+BBQUEUE_COMPILE_CHECKS = "enabled"
+BBQUEUE_RUNTIME_CHECKS = "enabled"
+BBQUEUE_STYLE_CHECKS = "enabled"
+BBQUEUE_CONTRACTS = "enabled"
+BBQUEUE_BUILD_MODE = "optimize"
+
 [[pins]]
 bbqueue = {path = "../"}
