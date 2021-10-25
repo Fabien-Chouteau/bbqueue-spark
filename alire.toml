@@ -13,5 +13,5 @@ long-description = """An Ada/SPARK proved implementation of James Munns'
 BBQueue (https://github.com/jamesmunns/bbqueue)"""
 
 [[depends-on]]
-atomic = "~0.3"
+atomic = "~0.4"
 gnat = ">=10"
