@@ -7,8 +7,6 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest] # [macos-latest, windows-latest, ubuntu-latest]
-        gnat_version: [^10, ^11]
-        gprbuild_version: [^21]
     runs-on: ${{ matrix.os }}
     env:
       BBQUEUE_COMPILE_CHECKS: enabled
@@ -17,15 +15,8 @@ jobs:
       BBQUEUE_CONTRACTS: enabled
 
     steps:
-    - uses: actions/checkout@v1
-    - uses: ada-actions/toolchain@ce2020
-      with:
-        distrib: community
+    - uses: actions/checkout@v2
     - uses: alire-project/setup-alire@v1
-      with:
-        branch: "master"
-        toolchain: gprbuild${{ matrix.gprbuild_version }} gnat_native${{ matrix.gnat_version }} --disable-assistant
-
     - uses: reviewdog/action-setup@v1
 
     - name: Alire build
@@ -52,7 +43,7 @@ jobs:
       run: |
         cd tests/
         status=0
-        alr exec -- gnatprove -Ptests/tests.gpr -j0 --level=4 --checks-as-errors -cargs -gnatef > output.txt 2>&1 || status=$?
+        alr gnatprove -j0 --level=4 --checks-as-errors -cargs -gnatef > output.txt 2>&1 || status=$?
         cat output.txt
         cat output.txt | reviewdog -efm="%f:%l:%c: %m" -diff="git diff master" --reporter=github-pr-review
         # Check for errors
