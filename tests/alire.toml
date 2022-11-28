@@ -5,6 +5,7 @@ executables = ["main_offsets", "main_buffer", "main_framed"]
 
 [[depends-on]]
 bbqueue = "*"
+gnatprove = "^11"
 
 [[pins]]
 bbqueue = {path = "../"}
