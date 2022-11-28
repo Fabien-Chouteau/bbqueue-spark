@@ -1,5 +1,9 @@
-name: Build and test
-on: [pull_request, push]
+on:                    # Run the workflow for each of the following event:
+  push:                # - A branch is pushed or updated.
+  pull_request:        # - A pull-request is openned or updated.
+  workflow_dispatch:   # - A manual run of the workflow is requested from the GitHub web interface.
+  release:
+    types: [created]   # - A release is created.
 
 jobs:
   linux-build:
@@ -55,3 +59,35 @@ jobs:
     - run: ./tests/obj/main_offsets
     - run: ./tests/obj/main_buffer
     - run: ./tests/obj/main_framed
+
+      # Produce an Alire release manifest
+    - name: Make Release Manifest
+      if: (startsWith(matrix.os, 'ubuntu'))
+      run: |
+        # Set user GitHub login required for `alr publish`
+        alr config --set --global user.github_login ${{github.repository_owner}}
+
+        # Run Alire publish assistant
+        alr publish ${{github.server_url}}/${{github.repository}} ${{github.sha}}
+
+      # Save the path to the release manifest for the next step.
+      # This is a little trick to get around the fact that the actions/upload-release-asset doesn't allow globing pattern.
+    - name: Get Release Manifest PATH
+      if: (github.event_name == 'release' && startsWith(matrix.os, 'ubuntu'))
+      shell: bash
+      run: |
+        export MANIFEST_PATHNAME=$(ls alire/releases/*.toml | head -n 1)
+        echo MANIFEST_PATHNAME=$MANIFEST_PATHNAME >> $GITHUB_ENV
+        echo MANIFEST_NAME=$(basename $MANIFEST_PATHNAME) >> $GITHUB_ENV
+
+      # If this worklow was triggered by a release event, upload the release manifest as a GitHub release asset.
+    - name: Upload release manifest
+      if: (github.event_name == 'release' && startsWith(matrix.os, 'ubuntu'))
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ env.MANIFEST_PATHNAME }}
+        asset_name: ${{ env.MANIFEST_NAME }}
+        asset_content_type: application/toml
