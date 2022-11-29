@@ -42,7 +42,8 @@ is
                     G    : in out Write_Grant;
                     Size : Framed_Count)
      with Pre  => State (G) /= Valid,
-          Post => State (G) in Valid | Empty | Grant_In_Progress | Insufficient_Size
+          Post => State (G) in Valid | Empty | Grant_In_Progress |
+                          Insufficient_Size
                   and then
                   (if State (G) = Valid then Write_Grant_In_Progress (This));
    --  Request a contiguous writeable slice of the internal buffer
@@ -58,7 +59,8 @@ is
    --  partial commits. The commited slice is then available for Read.
 
    generic
-      with procedure Process_Write (Data : out Storage_Array; To_Commit : out Count);
+      with procedure Process_Write (Data      : out Storage_Array;
+                                    To_Commit : out Count);
    procedure Write_CB (This   : in out Framed_Buffer;
                        Size   :        Framed_Count;
                        Result :    out Result_Kind);
@@ -95,7 +97,8 @@ is
    procedure Read_CB (This   : in out Framed_Buffer;
                       Result :    out Result_Kind);
    --  Read from the buffer using a "callback". This procedure will call
-   --  Process_Read () on the slice returned by Read (), if the result is Valid.
+   --  Process_Read () on the slice returned by Read (), if the result is
+   --  Valid.
 
    -- Utils --
 

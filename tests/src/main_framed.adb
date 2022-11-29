@@ -20,12 +20,17 @@ is
    -- Fill_With_CB --
    ------------------
 
-   procedure Fill_With_CB (Request, Actual : BBqueue.Count; Val : Storage_Element) is
+   procedure Fill_With_CB (Request, Actual : BBqueue.Count;
+                           Val             : Storage_Element)
+   is
       pragma SPARK_Mode (Off);
 
-      procedure Process_Write (Data : out Storage_Array; To_Commit : out BBqueue.Count);
+      procedure Process_Write (Data      : out Storage_Array;
+                               To_Commit : out BBqueue.Count);
 
-      procedure Process_Write (Data : out Storage_Array; To_Commit : out BBqueue.Count) is
+      procedure Process_Write (Data      : out Storage_Array;
+                               To_Commit : out BBqueue.Count)
+      is
       begin
          Put_Line ("Fill" & Actual'Img & " bytes.");
          Data (Data'First .. Data'First + Actual - 1) := (others => Val);

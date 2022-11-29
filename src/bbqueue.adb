@@ -145,9 +145,9 @@ is
 
       if (New_Write < Write) and then (Write /= Max) then
 
-         --  We have already wrapped, but we are skipping some bytes at the end
-         --  of the ring. Mark `last` where the write pointer used to be to hold
-         --  the line here
+         --  We have already wrapped, but we are skipping some bytes at the
+         --  end of the ring. Mark `last` where the write pointer used to be
+         --  to hold the line here
          Atomic_Count.Store (This.Last, Write, Release);
 
       elsif New_Write > Last then

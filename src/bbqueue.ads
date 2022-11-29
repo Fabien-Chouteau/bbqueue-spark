@@ -27,6 +27,8 @@ with Preelaborate,
      SPARK_Mode,
      Abstract_State => null
 is
+   pragma Warnings (Off, "lower bound check only fails if it is invalid");
+
    type Result_Kind is (Valid, Grant_In_Progress, Insufficient_Size, Empty);
 
    subtype Count is Storage_Count;
@@ -43,7 +45,8 @@ is
                     G    : in out Write_Grant;
                     Size : Count)
      with Pre  => State (G) /= Valid,
-          Post => State (G) in Valid | Empty | Grant_In_Progress | Insufficient_Size
+          Post => State (G) in Valid | Empty | Grant_In_Progress |
+                               Insufficient_Size
                   and then
                    (if Size = 0 then State (G) = Empty)
                   and then
@@ -127,14 +130,23 @@ is
    --  Arr (Arr'First + Start_Offset .. Arr'First + End_Offset)
    --  will never be out of bounds.
 
-   function Valid_Write_Slice (This : Offsets_Only; Slice : Slice_Rec) return Boolean
+   function Valid_Write_Slice (This : Offsets_Only;
+                               Slice : Slice_Rec)
+                               return Boolean
      with Ghost;
 
-   function Valid_Read_Slice (This : Offsets_Only; Slice : Slice_Rec) return Boolean
+   function Valid_Read_Slice (This : Offsets_Only;
+                              Slice : Slice_Rec)
+                              return Boolean
      with Ghost;
 
-   function Write_Grant_In_Progress (This : Offsets_Only) return Boolean with Ghost;
-   function Read_Grant_In_Progress (This : Offsets_Only) return Boolean with Ghost;
+   function Write_Grant_In_Progress (This : Offsets_Only)
+                                     return Boolean
+     with Ghost;
+
+   function Read_Grant_In_Progress (This : Offsets_Only)
+                                    return Boolean
+     with Ghost;
 
 private
 
@@ -172,9 +184,10 @@ private
       --  NOTE: This should generally be initialized as size_of::<self.buf>(),
       --  however this would prevent the structure from being entirely
       --  zero-initialized, and can cause the .data section to be much larger
-      --  than necessary. By forcing the `last` pointer to be zero initially, we
-      --  place the structure in an "inverted" condition, which will be resolved
-      --  on the first commited bytes that are written to the structure.
+      --  than necessary. By forcing the `last` pointer to be zero initially,
+      --  we place the structure in an "inverted" condition, which will
+      --  be resolved on the first commited bytes that are written to the
+      --  structure.
       --
       --  When read == last == write, no bytes will be allowed to be read
       --  (good), but write grants can be given out (also good).
@@ -194,20 +207,18 @@ private
       Granted_Read_Size : Count := 0;
    end record
      with Invariant =>
-              Size <= Buffer_Size'Last
-     and then Value (Write) in 0 .. Size
+              Value (Write) in 0 .. Size
      and then Value (Read) in 0 .. Size
      and then Value (Last) in 0 .. Size
      and then Value (Reserve) in 0 .. Size
      and then Value (Last) >= Value (Read)
      and then Value (Last) >= Value (Write)
-     and then Granted_Write_Size <= Buffer_Size'Last
-     and then Granted_Read_Size <= Buffer_Size'Last
 
      --  Reserve can only be lower than Write when a write grant made an
      --  inverted allocation (starting back at 0), but the grant is not
      --  commited yet.
-     and then (if Value (Reserve) < Value (Write) then not Is_Inverted (Offsets_Only))
+     and then (if Value (Reserve) < Value (Write)
+               then not Is_Inverted (Offsets_Only))
      and then (if Value (Reserve) < Value (Write)
                then not Is_Inverted (Offsets_Only)
                     and then Value (Write) >= Value (Read)
@@ -229,7 +240,9 @@ private
                or else
                (not (Granted_Write_Size /= 0
                      and then
-                       Value (Read) in Value (Reserve) - Granted_Write_Size .. Value (Reserve) - 1
+                       Value (Read) in
+                         Value (Reserve) - Granted_Write_Size ..
+                         Value (Reserve) - 1
                     )))
 
      --  Write grant bounds
@@ -243,18 +256,20 @@ private
                else Granted_Read_Size <= Value (Write) - Value (Read))
 
      --  Reserve when about to invert
-     and then (if not Is_Inverted (Offsets_Only) and then Value (Reserve) < Value (Write) then
-                 --  When Reserved wrapped around, we know that it is because we
-                 --  needed more space than what is available between Write and
-                 --  then end of the buffer
+     and then (if not Is_Inverted (Offsets_Only)
+                  and then Value (Reserve) < Value (Write)
+               then
+                 --  When Reserved wrapped around, we know that it is because
+                 --  we needed more space than what is available between Write
+                 --  and then end of the buffer
                  Value (Reserve) > (Size - Value (Write))
               )
 
      and then (Value (Read) + Granted_Read_Size in 0 .. Size)
-     and then (if not Atomic.Value (Write_In_Progress) then Granted_Write_Size = 0)
-     and then (if not Atomic.Value (Read_In_Progress) then Granted_Read_Size = 0)
-     --  and then (if Atomic.Value (Write_In_Progress) then Granted_Write_Size /= 0)
-     --  and then (if Atomic.Value (Read_In_Progress) then Granted_Read_Size /= 0)
+     and then (if not Atomic.Value (Write_In_Progress)
+               then Granted_Write_Size = 0)
+     and then (if not Atomic.Value (Read_In_Progress)
+               then Granted_Read_Size = 0)
    ;
 
    function Is_Inverted (This : Offsets_Only) return Boolean
@@ -267,17 +282,11 @@ private
       Result : Result_Kind := Empty;
       Slice  : Slice_Rec := Empty_Slice;
    end record;
-     --  with Invariant => (case Write_Grant.Result is
-     --                       when Valid => not Slices.Empty (Write_Grant.Slice),
-     --                       when others => Slices.Empty (Write_Grant.Slice));
 
    type Read_Grant is limited record
       Result : Result_Kind := Empty;
       Slice  : Slice_Rec := Empty_Slice;
    end record;
-     --  with Invariant => (case Read_Grant.Result is
-     --                       when Valid => not Slices.Empty (Read_Grant.Slice),
-     --                       when others => Slices.Empty (Read_Grant.Slice));
 
    function State (G : Write_Grant) return Result_Kind
    is (G.Result);
@@ -299,7 +308,9 @@ private
    -- In_Readable_Area --
    ----------------------
 
-   function In_Readable_Area (This : Offsets_Only; Offset : Buffer_Offset) return Boolean
+   function In_Readable_Area (This   : Offsets_Only;
+                              Offset : Buffer_Offset)
+                              return Boolean
    is (if Is_Inverted (This) then
          --  Already inverted.
          (if Value (This.Read) /= Value (This.Last) then
@@ -323,7 +334,9 @@ private
    -- In_Writable_Area --
    ----------------------
 
-   function In_Writable_Area (This : Offsets_Only; Offset : Buffer_Offset) return Boolean
+   function In_Writable_Area (This : Offsets_Only;
+                              Offset : Buffer_Offset)
+                              return Boolean
    is (if Is_Inverted (This) then
           --  Already inverted
           --  |---W==========R----|
@@ -342,12 +355,16 @@ private
    -- Valid_Write_Slice --
    -----------------------
 
-   function Valid_Write_Slice (This : Offsets_Only; Slice : Slice_Rec) return Boolean
+   function Valid_Write_Slice (This : Offsets_Only;
+                               Slice : Slice_Rec)
+                               return Boolean
    is (Valid_Slice (This, Slice)
        and then In_Writable_Area (This, Slice.From)
        and then In_Writable_Area (This, Slice.To));
 
-   function Valid_Read_Slice (This : Offsets_Only; Slice : Slice_Rec) return Boolean
+   function Valid_Read_Slice (This : Offsets_Only;
+                              Slice : Slice_Rec)
+                              return Boolean
    is (Valid_Slice (This, Slice)
        and then In_Readable_Area (This, Slice.From)
        and then In_Readable_Area (This, Slice.To));

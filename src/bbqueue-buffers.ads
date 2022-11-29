@@ -36,7 +36,8 @@ is
                     Size : Count)
      with Global => null,
           Pre  => State (G) /= Valid,
-          Post => State (G) in Valid | Empty | Grant_In_Progress | Insufficient_Size
+          Post => State (G) in Valid | Empty | Grant_In_Progress |
+                               Insufficient_Size
                   and then
                    (if Size = 0 then State (G) = Empty)
                   and then
@@ -56,7 +57,8 @@ is
    --  partial commits. The commited slice is then available for Read.
 
    generic
-      with procedure Process_Write (Data : out Storage_Array; To_Commit : out Count);
+      with procedure Process_Write (Data      : out Storage_Array;
+                                    To_Commit : out Count);
    procedure Write_CB (This   : in out Buffer;
                        Size   :        Count;
                        Result :    out Result_Kind);
@@ -78,8 +80,8 @@ is
                   (if State (G) = Valid
                        then Read_Grant_In_Progress (This)
                    and then Slice (G).Length <= Max);
-   --  Request contiguous readable slice of up to Max elements from the internal
-   --  buffer.
+   --  Request contiguous readable slice of up to Max elements from the
+   --  internal buffer.
 
    procedure Release (This : in out Buffer;
                       G    : in out Read_Grant;
@@ -92,7 +94,8 @@ is
    --  partial releases.
 
    generic
-      with procedure Process_Read (Data : Storage_Array; To_Release : out Count);
+      with procedure Process_Read (Data       :     Storage_Array;
+                                   To_Release : out Count);
    procedure Read_CB (This   : in out Buffer;
                       Result :    out Result_Kind);
    --  Read from the buffer using a "callback". This procedure will call
