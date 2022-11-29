@@ -48,9 +48,12 @@ is
 
       pragma SPARK_Mode (Off);
 
-      procedure Process_Write (Data : out Storage_Array; To_Commit : out BBqueue.Count);
+      procedure Process_Write (Data      : out Storage_Array;
+                               To_Commit : out BBqueue.Count);
 
-      procedure Process_Write (Data : out Storage_Array; To_Commit : out BBqueue.Count) is
+      procedure Process_Write (Data      : out Storage_Array;
+                               To_Commit : out BBqueue.Count)
+      is
       begin
          Put_Line ("Fill" & Data'Length'Img & " bytes.");
          Data := (others => Val);
@@ -87,9 +90,12 @@ is
    ---------------------------
 
    procedure Print_Content_With_CB is
-      procedure Process_Read (Data : Storage_Array; To_Release : out BBqueue.Count);
+      procedure Process_Read (Data       :     Storage_Array;
+                              To_Release : out BBqueue.Count);
 
-      procedure Process_Read (Data : Storage_Array; To_Release : out BBqueue.Count) is
+      procedure Process_Read (Data       :     Storage_Array;
+                              To_Release : out BBqueue.Count)
+      is
       begin
          Put ("Print" & Data'Length'Img & " bytes -> ");
          for Elt of Data loop

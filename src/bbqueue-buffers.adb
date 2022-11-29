@@ -1,6 +1,9 @@
 package body BBqueue.Buffers
 with SPARK_Mode
 is
+
+   pragma Warnings (Off, "lower bound test optimized away");
+
    function Get_Addr (This   : Buffer;
                       Offset : Buffer_Offset)
                       return System.Address

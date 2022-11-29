@@ -8,3 +8,7 @@ lib/
 alire/
 config/
 alire.lock
+/obj/
+/lib/
+/alire/
+/config/

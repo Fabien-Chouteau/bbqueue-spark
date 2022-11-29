@@ -9,3 +9,6 @@ gnatprove = "^11"
 
 [[pins]]
 bbqueue = {path = "../"}
+
+[build-profiles]
+bbqueue = "validation"

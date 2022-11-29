@@ -1,6 +1,7 @@
 package body BBqueue.Buffers.framed
 with SPARK_Mode
 is
+   pragma Warnings (Off, "upper bound check only fails for invalid values");
 
    pragma Compile_Time_Error ((Count'Object_Size mod System.Storage_Unit) /= 0,
                              "Invalid Object_Size for Count");
@@ -32,7 +33,8 @@ is
       pragma SPARK_Mode (Off);
       Header : Count
         with Address =>
-          To_Address (To_Integer (After_Hdr_Addr) - Integer_Address (Hdr_Size));
+          To_Address
+            (To_Integer (After_Hdr_Addr) - Integer_Address (Hdr_Size));
    begin
       Header := Value;
    end Write_Header;
@@ -82,7 +84,8 @@ is
          --  Change the slice to skip the header
          G.Grant.Slice.Length := G.Grant.Slice.Length - Hdr_Size;
          G.Grant.Slice.Addr :=
-           To_Address (To_Integer (G.Grant.Slice.Addr) + Integer_Address (Hdr_Size));
+           To_Address
+             (To_Integer (G.Grant.Slice.Addr) + Integer_Address (Hdr_Size));
       else
          --  Grant failed, no header
          G.Header_Size := 0;
@@ -165,7 +168,8 @@ is
          --  the frame.
          G.Grant.Slice.Length := Frame_Size;
          G.Grant.Slice.Addr :=
-           To_Address (To_Integer (G.Grant.Slice.Addr) + Integer_Address (Hdr_Size));
+           To_Address
+             (To_Integer (G.Grant.Slice.Addr) + Integer_Address (Hdr_Size));
 
          This.Current_Read_Size := Frame_Size;
       end if;
