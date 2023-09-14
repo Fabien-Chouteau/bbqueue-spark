@@ -12,6 +12,9 @@ website = "https://github.com/Fabien-Chouteau/bbqueue-spark"
 long-description = """An Ada/SPARK proved implementation of James Munns'
 BBQueue (https://github.com/jamesmunns/bbqueue)"""
 
+[build-switches]
+release.runtime_checks = "none"
+
 [[depends-on]]
-atomic = "~0.4"
+atomic = "~0.5"
 gnat = ">=10"
