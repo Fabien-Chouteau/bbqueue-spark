@@ -1,6 +1,6 @@
 name = "bbqueue"
 description = "DMA friendly lock-free BipBuffer"
-version = "0.3.1"
+version = "0.3.2"
 
 licenses = "MIT"
 authors = ["Fabien Chouteau"]
