@@ -1,6 +1,6 @@
 name = "bbqueue"
 description = "DMA friendly lock-free BipBuffer"
-version = "0.4.0-dev"
+version = "1.1.0-dev"
 
 licenses = "MIT"
 authors = ["Fabien Chouteau"]
@@ -16,5 +16,5 @@ BBQueue (https://github.com/jamesmunns/bbqueue)"""
 release.runtime_checks = "none"
 
 [[depends-on]]
-atomic = "~0.5"
+atomic = "^1.0.0"
 gnat = ">=10"
