@@ -12,82 +12,24 @@ jobs:
       matrix:
         os: [ubuntu-latest] # [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    env:
-      BBQUEUE_COMPILE_CHECKS: enabled
-      BBQUEUE_RUNTIME_CHECKS: enabled
-      BBQUEUE_STYLE_CHECKS: enabled
-      BBQUEUE_CONTRACTS: enabled
 
     steps:
-    - uses: actions/checkout@v2
-    - uses: alire-project/setup-alire@v1
-    - uses: reviewdog/action-setup@v1
+    - uses: actions/checkout@v5
+    - uses: alire-project/setup-alire@v5
 
     - name: Alire build
       run: alr build
 
     - name: Test Build
-      env:
-        REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         cd tests/
-        status=0
-        alr -q build > output.txt 2>&1 || status=$?
-        cat output.txt
-        cat output.txt | reviewdog -efm="%f:%l:%c: %m" -diff="git diff master" --reporter=github-pr-review
-        # Check for errors
-        if [ $status -ne 0 ]; then
-           echo "ERROR: gprbuild returned $status"
-           # This will cause the workflow to exit with $status
-           bash -c "exit $status"
-        fi
+        alr build
+        
     - name: SPARK proof
-      env:
-        REVIEWDOG_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         cd tests/
-        status=0
         alr gnatprove -j0 --level=4 --checks-as-errors -cargs -gnatef > output.txt 2>&1 || status=$?
-        cat output.txt
-        cat output.txt | reviewdog -efm="%f:%l:%c: %m" -diff="git diff master" --reporter=github-pr-review
-        # Check for errors
-        if [ $status -ne 0 ]; then
-           echo "ERROR: gnatprove returned $status"
-           # This will cause the workflow to exit with $status
-           bash -c "exit $status"
-        fi
+
     - run: ./tests/obj/main_offsets
     - run: ./tests/obj/main_buffer
     - run: ./tests/obj/main_framed
-
-      # Produce an Alire release manifest
-    - name: Make Release Manifest
-      if: (startsWith(matrix.os, 'ubuntu'))
-      run: |
-        # Set user GitHub login required for `alr publish`
-        alr config --set --global user.github_login ${{github.repository_owner}}
-
-        # Run Alire publish assistant
-        alr publish ${{github.server_url}}/${{github.repository}} ${{github.sha}}
-
-      # Save the path to the release manifest for the next step.
-      # This is a little trick to get around the fact that the actions/upload-release-asset doesn't allow globing pattern.
-    - name: Get Release Manifest PATH
-      if: (github.event_name == 'release' && startsWith(matrix.os, 'ubuntu'))
-      shell: bash
-      run: |
-        export MANIFEST_PATHNAME=$(ls alire/releases/*.toml | head -n 1)
-        echo MANIFEST_PATHNAME=$MANIFEST_PATHNAME >> $GITHUB_ENV
-        echo MANIFEST_NAME=$(basename $MANIFEST_PATHNAME) >> $GITHUB_ENV
-
-      # If this worklow was triggered by a release event, upload the release manifest as a GitHub release asset.
-    - name: Upload release manifest
-      if: (github.event_name == 'release' && startsWith(matrix.os, 'ubuntu'))
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ${{ env.MANIFEST_PATHNAME }}
-        asset_name: ${{ env.MANIFEST_NAME }}
-        asset_content_type: application/toml

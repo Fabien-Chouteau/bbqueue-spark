@@ -17,4 +17,4 @@ release.runtime_checks = "none"
 
 [[depends-on]]
 atomic = "~0.5"
-gnat = ">=10"
+gnat = ">=10 & /=15.1"
